@@ -6,6 +6,8 @@
     <title>Estudo.IA: Gerador de Questões e Resumos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.0/mammoth.browser.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -195,7 +197,6 @@
                         userId = user.uid;
                         console.log("Usuário autenticado com UID:", userId);
                     } else {
-                        // Tenta autenticação anônima como fallback se não houver token customizado
                         signInAnonymously(auth).then(userCredential => {
                             userId = userCredential.user.uid;
                             console.log("Usuário autenticado anonimamente:", userId);
@@ -219,7 +220,6 @@
     function addMaterialBlock() {
         const newBlock = document.createElement('div');
         newBlock.className = 'study-material-block border border-gray-200 rounded-lg p-4 bg-gray-50';
-        // Ajustando o label para usar materialBlockCount + 1 já que o primeiro é 1 e o materialBlockCount começa em 1 após o inicial
         newBlock.innerHTML = `
             <label for="studyMaterial_${materialBlockCount}" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo ${materialBlockCount + 1} (Assunto):</label>
             <textarea id="studyMaterial_${materialBlockCount}" rows="6"
@@ -234,8 +234,6 @@
         
         newBlock.querySelector('.remove-material-block').addEventListener('click', (e) => {
             e.target.closest('.study-material-block').remove();
-            // Poderíamos reajustar os IDs e labels aqui para manter a sequência,
-            // mas para um app simples, a remoção visual é suficiente.
         });
 
         materialBlockCount++;
@@ -521,7 +519,7 @@
         numQuestionsInput = document.getElementById('numQuestions');
         studyMaterialsContainer = document.getElementById('studyMaterialsContainer');
         addStudyMaterialBlockButton = document.getElementById('addStudyMaterialBlock');
-        fileUploadInput = document.getElementById('fileUpload');
+        fileUploadInput = document.getElementById('fileUpload'); // Mantenha aqui
 
         generateMCQButton = document.getElementById('generateMCQ');
         generateTrueFalseButton = document.getElementById('generateTrueFalse');
@@ -546,9 +544,6 @@
         addStudyMaterialBlockButton.addEventListener('click', addMaterialBlock);
         
         // Listener para o botão "Remover" do bloco inicial (ID studyMaterial_0)
-        // materialBlockCount = 1 inicialmente para o HTML. O ID do primeiro bloco é 0.
-        // A lógica de remoção deve ser dinâmica para todos os blocos.
-        // Vamos garantir que o primeiro bloco também seja removível.
         const initialRemoveButton = document.querySelector('#studyMaterialsContainer .study-material-block:first-child .remove-material-block');
         if (initialRemoveButton) {
             initialRemoveButton.addEventListener('click', (e) => {
@@ -557,6 +552,81 @@
         }
         
         submitAnswersButton.addEventListener('click', checkAnswersAndDisplayResults);
+
+        // --- CÓDIGO PARA UPLOAD DE ARQUIVOS (AGORA COM PDF/DOCX) ---
+        // Certifique-se que o pdf.js e mammoth.js estão carregados no <head>
+        fileUploadInput.addEventListener('change', async (event) => { // Tornar async para usar await com promessas de bibliotecas
+            const file = event.target.files[0];
+
+            if (!file) {
+                return; // No file selected
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            hideErrorMessage();
+            hideAllOutputs();
+            document.getElementById('studyMaterial_0').value = ''; // Limpar antes de carregar
+
+            try {
+                let fileContent = '';
+                if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+                    fileContent = await readFileAsText(file);
+                    showErrorMessage("Conteúdo do arquivo TXT carregado com sucesso.");
+                } else if (file.type === 'application/pdf') {
+                    // pdf.js já está disponível globalmente através do CDN
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                    fileContent = await extractTextFromPdf(file);
+                    showErrorMessage("Conteúdo do arquivo PDF carregado com sucesso.");
+                } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+                    // mammoth.js já está disponível globalmente através do CDN
+                    fileContent = await extractTextFromDocx(file);
+                    showErrorMessage("Conteúdo do arquivo DOCX carregado com sucesso.");
+                } else {
+                    showErrorMessage("Formato de arquivo não suportado. Por favor, use .txt, .pdf ou .docx.");
+                }
+                
+                document.getElementById('studyMaterial_0').value = fileContent;
+
+            } catch (error) {
+                console.error("Erro ao processar o arquivo:", error);
+                showErrorMessage(`Erro ao processar o arquivo: ${error.message}.`);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                fileUploadInput.value = ''; // Limpar o input de arquivo
+            }
+        });
+
+        // Helper function para ler arquivos de texto
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error("Falha ao ler arquivo de texto."));
+                reader.readAsText(file);
+            });
+        }
+
+        // Helper function para extrair texto de PDF
+        async function extractTextFromPdf(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(' ') + '\n';
+            }
+            return text;
+        }
+
+        // Helper function para extrair texto de DOCX
+        async function extractTextFromDocx(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            return result.value; // O texto extraído
+        }
+        // --- FIM DO CÓDIGO DE UPLOAD ---
+
 
         generateMCQButton.addEventListener('click', async () => {
             const numTotalQuestions = parseInt(numQuestionsInput.value);
