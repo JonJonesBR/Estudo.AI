@@ -138,11 +138,10 @@
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    // getFirestore não é usado atualmente na lógica, então podemos removê-lo se não for planejado para uso futuro imediato
+    // getFirestore não é usado atualmente na lógica, então podemos remover se não for planejado para uso futuro imediato
     // import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // Variáveis globais fornecidas pelo ambiente Canvas - Mantidas, mas serão tratadas como opcionais.
-    // Se você não está em um ambiente Canvas, elas serão 'default-app-id' ou null/{}
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
@@ -154,11 +153,12 @@
     let generatedQuizQuestions = []; 
 
     // Declarações de variáveis no escopo do módulo para garantir acessibilidade
+    // (Serão atribuídas DENTRO de window.onload)
     let apiKeyInput;
     let numQuestionsInput;
     let studyMaterialsContainer;
     let addStudyMaterialBlockButton;
-    let fileUploadInput; // Não implementado, mas declarado
+    let fileUploadInput;
 
     let generateMCQButton;
     let generateTrueFalseButton;
@@ -179,15 +179,15 @@
     let errorMessageDiv;
     let errorMessageText;
 
-    let materialBlockCount = 0; // Começa em 0 para corresponder ao ID inicial do primeiro bloco
+    let materialBlockCount = 1; // Começa em 1 para corresponder a "Material de Estudo 1" no HTML
+
+    // --- FUNÇÕES GERAIS (definidas antes de window.onload) ---
 
     // Função para inicializar Firebase e autenticar
     async function initializeFirebase() {
         try {
-            // Apenas inicializa Firebase se houver uma configuração válida (e não for o default vazio)
             if (Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey && firebaseConfig.projectId) {
                 app = initializeApp(firebaseConfig);
-                // db = getFirestore(app); // Se precisar do Firestore, descomente
                 auth = getAuth(app);
 
                 onAuthStateChanged(auth, (user) => {
@@ -195,31 +195,19 @@
                         userId = user.uid;
                         console.log("Usuário autenticado com UID:", userId);
                     } else {
-                        // Se não houver token ou usuário, tenta autenticar anonimamente
-                        // ou apenas gera um UUID para um usuário temporário
-                        if (initialAuthToken) {
-                            signInAnonymously(auth).then(userCredential => { // Usando signInAnonymously como fallback
-                                userId = userCredential.user.uid;
-                                console.log("Usuário autenticado com token personalizado (via fallback anônimo):", userId);
-                            }).catch(error => {
-                                console.error("Erro ao autenticar com token personalizado/anônimo:", error);
-                                userId = crypto.randomUUID(); // Fallback final
-                            });
-                        } else {
-                            signInAnonymously(auth).then(userCredential => {
-                                userId = userCredential.user.uid;
-                                console.log("Usuário autenticado anonimamente:", userId);
-                            }).catch(error => {
-                                console.error("Erro ao autenticar anonimamente:", error);
-                                userId = crypto.randomUUID(); // Fallback
-                            });
-                        }
+                        // Tenta autenticação anônima como fallback se não houver token customizado
+                        signInAnonymously(auth).then(userCredential => {
+                            userId = userCredential.user.uid;
+                            console.log("Usuário autenticado anonimamente:", userId);
+                        }).catch(error => {
+                            console.error("Erro ao autenticar anonimamente:", error);
+                            userId = crypto.randomUUID(); // Fallback final se nada funcionar
+                        });
                     }
                 });
             } else {
                 console.warn("Configuração do Firebase vazia ou inválida. Firebase não será inicializado.");
-                // Se Firebase não for usado, userId pode ser um UUID gerado para rastreamento local
-                userId = crypto.randomUUID();
+                userId = crypto.randomUUID(); // Gera um UUID para um usuário temporário
             }
         } catch (error) {
             console.error("Erro ao inicializar Firebase ou autenticar:", error);
@@ -231,6 +219,7 @@
     function addMaterialBlock() {
         const newBlock = document.createElement('div');
         newBlock.className = 'study-material-block border border-gray-200 rounded-lg p-4 bg-gray-50';
+        // Ajustando o label para usar materialBlockCount + 1 já que o primeiro é 1 e o materialBlockCount começa em 1 após o inicial
         newBlock.innerHTML = `
             <label for="studyMaterial_${materialBlockCount}" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo ${materialBlockCount + 1} (Assunto):</label>
             <textarea id="studyMaterial_${materialBlockCount}" rows="6"
@@ -243,14 +232,14 @@
         `;
         studyMaterialsContainer.appendChild(newBlock);
         
-        // Adiciona event listener para o botão "Remover" NOVO
         newBlock.querySelector('.remove-material-block').addEventListener('click', (e) => {
             e.target.closest('.study-material-block').remove();
+            // Poderíamos reajustar os IDs e labels aqui para manter a sequência,
+            // mas para um app simples, a remoção visual é suficiente.
         });
 
         materialBlockCount++;
     }
-
 
     // Função para mostrar mensagem de erro
     function showErrorMessage(message) {
@@ -432,9 +421,9 @@
         questionsOutputDiv.classList.remove('hidden');
     }
 
-    // NOVA FUNÇÃO: Para exibir o resumo
+    // Função para exibir o resumo (estava faltando ou mal posicionada)
     function displaySummary(summary) {
-        summaryTextP.innerHTML = ''; // Limpa o conteúdo anterior
+        summaryTextP.innerHTML = ''; 
         if (!summary) {
             summaryTextP.textContent = 'Não foi possível gerar o resumo. Tente novamente.';
         } else {
@@ -443,9 +432,7 @@
         summaryOutputDiv.classList.remove('hidden');
     }
 
-
     // Função para verificar respostas e exibir desempenho
-    // RENOMEADA E MOVIDA PARA DENTRO DE window.onload
     function checkAnswersAndDisplayResults() {
         let correctAnswers = 0;
         const userAnswers = [];
@@ -526,17 +513,15 @@
 
 
     // **********************************************
-    // ESTE É O BLOCO window.onload CORRIGIDO
-    // Tudo que precisa acessar elementos do DOM
-    // ou adicionar event listeners deve estar aqui dentro.
+    // INÍCIO DO SCRIPT EXECUTADO APÓS O DOM ESTAR PRONTO
     // **********************************************
     window.onload = function() {
-        // Atribuição de variáveis: Todos os elementos DOM são atribuídos aqui.
+        // Atribuição de variáveis DOM (todos os elementos HTML são encontrados aqui)
         apiKeyInput = document.getElementById('apiKey');
         numQuestionsInput = document.getElementById('numQuestions');
         studyMaterialsContainer = document.getElementById('studyMaterialsContainer');
         addStudyMaterialBlockButton = document.getElementById('addStudyMaterialBlock');
-        fileUploadInput = document.getElementById('fileUpload'); // Ainda não implementado
+        fileUploadInput = document.getElementById('fileUpload');
 
         generateMCQButton = document.getElementById('generateMCQ');
         generateTrueFalseButton = document.getElementById('generateTrueFalse');
@@ -557,26 +542,22 @@
         errorMessageDiv = document.getElementById('errorMessage');
         errorMessageText = document.getElementById('errorMessageText');
 
-        // Adiciona o event listener para o botão "Adicionar Outro Assunto"
+        // Event Listeners (agora atribuídos DEPOIS que os elementos foram encontrados)
         addStudyMaterialBlockButton.addEventListener('click', addMaterialBlock);
         
-        // Adiciona event listener para o botão "Remover" do bloco inicial (ID studyMaterial_0)
-        // Certifique-se que o botão 'Remover' está presente no HTML do primeiro bloco!
-        const firstRemoveButton = document.querySelector('#studyMaterialsContainer .study-material-block .remove-material-block');
-        if (firstRemoveButton) { // Verifica se o botão existe antes de tentar adicionar o listener
-            firstRemoveButton.addEventListener('click', (e) => {
+        // Listener para o botão "Remover" do bloco inicial (ID studyMaterial_0)
+        // materialBlockCount = 1 inicialmente para o HTML. O ID do primeiro bloco é 0.
+        // A lógica de remoção deve ser dinâmica para todos os blocos.
+        // Vamos garantir que o primeiro bloco também seja removível.
+        const initialRemoveButton = document.querySelector('#studyMaterialsContainer .study-material-block:first-child .remove-material-block');
+        if (initialRemoveButton) {
+            initialRemoveButton.addEventListener('click', (e) => {
                 e.target.closest('.study-material-block').remove();
             });
-        } else {
-            console.warn("Botão 'Remover' não encontrado no primeiro bloco de material de estudo. Ele não será removível.");
         }
-
-
-        // Event Listener para o botão de verificar respostas
+        
         submitAnswersButton.addEventListener('click', checkAnswersAndDisplayResults);
 
-
-        // Event Listeners para os botões de Geração - AGORA ESTÃO NO LUGAR CERTO!
         generateMCQButton.addEventListener('click', async () => {
             const numTotalQuestions = parseInt(numQuestionsInput.value);
             if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
