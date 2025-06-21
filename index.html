@@ -57,11 +57,12 @@
                 <div class="study-material-block border border-gray-200 rounded-lg p-4 bg-gray-50">
                     <label for="studyMaterial_0" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo 1 (Assunto):</label>
                     <textarea id="studyMaterial_0" rows="6"
-                              class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 mb-3"
-                              placeholder="Cole o texto para o Assunto 1 aqui..."></textarea>
+                                        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 mb-3"
+                                        placeholder="Cole o texto para o Assunto 1 aqui..."></textarea>
                     <label for="numQuestions_0" class="block text-gray-700 text-base font-medium mb-2">Questões para este Assunto:</label>
                     <input type="number" id="numQuestions_0" value="0" min="0"
-                           class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                    <button type="button" class="remove-material-block mt-2 bg-red-400 hover:bg-red-500 text-white text-sm py-1 px-3 rounded">Remover</button>
                 </div>
             </div>
             <button id="addStudyMaterialBlock"
@@ -140,7 +141,7 @@
     // getFirestore não é usado atualmente na lógica, então podemos removê-lo se não for planejado para uso futuro imediato
     // import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Variáveis globais do ambiente Canvas - Mantidas, mas serão tratadas como opcionais.
+    // Variáveis globais fornecidas pelo ambiente Canvas - Mantidas, mas serão tratadas como opcionais.
     // Se você não está em um ambiente Canvas, elas serão 'default-app-id' ou null/{}
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -197,12 +198,12 @@
                         // Se não houver token ou usuário, tenta autenticar anonimamente
                         // ou apenas gera um UUID para um usuário temporário
                         if (initialAuthToken) {
-                            signInWithCustomToken(auth, initialAuthToken).then(userCredential => {
+                            signInAnonymously(auth).then(userCredential => { // Usando signInAnonymously como fallback
                                 userId = userCredential.user.uid;
-                                console.log("Usuário autenticado com token personalizado:", userId);
+                                console.log("Usuário autenticado com token personalizado (via fallback anônimo):", userId);
                             }).catch(error => {
-                                console.error("Erro ao autenticar com token personalizado:", error);
-                                userId = crypto.randomUUID(); // Fallback
+                                console.error("Erro ao autenticar com token personalizado/anônimo:", error);
+                                userId = crypto.randomUUID(); // Fallback final
                             });
                         } else {
                             signInAnonymously(auth).then(userCredential => {
@@ -245,8 +246,6 @@
         // Adiciona event listener para o botão "Remover" NOVO
         newBlock.querySelector('.remove-material-block').addEventListener('click', (e) => {
             e.target.closest('.study-material-block').remove();
-            // Opcional: Reordenar IDs e labels após remoção, mas pode ser complexo.
-            // Para um app simples, remover é suficiente.
         });
 
         materialBlockCount++;
@@ -446,7 +445,8 @@
 
 
     // Função para verificar respostas e exibir desempenho
-    submitAnswersButton.addEventListener('click', () => {
+    // RENOMEADA E MOVIDA PARA DENTRO DE window.onload
+    function checkAnswersAndDisplayResults() {
         let correctAnswers = 0;
         const userAnswers = [];
         quizReviewDiv.innerHTML = '';
@@ -465,16 +465,11 @@
             reviewCard.className = 'bg-gray-50 p-5 rounded-lg shadow-sm border border-gray-200';
             
             let isCorrect = false;
-            // Normaliza a resposta correta para comparação (ex: remove A), B), C))
             const cleanCorrectAnswer = q.answer.toString().replace(/^[A-E]\)\s*/, '').toLowerCase();
 
             if (q.type === 'MCQ' || q.type === 'TrueFalse') {
-                // Para MCQs, compare a letra escolhida com a letra da resposta correta
-                // Para TrueFalse, compare a string "Verdadeiro" ou "Falso"
                 isCorrect = (userAnswer.toLowerCase() === cleanCorrectAnswer);
             } else if (q.type === 'OpenEnded') {
-                // Para questões abertas, consideramos "correto" se houver alguma resposta
-                // A validação real da correção de uma resposta aberta é complexa e exige IA.
                 isCorrect = userAnswer.length > 0; 
             }
 
@@ -493,13 +488,12 @@
                 }
             }
 
-            let reviewDetails = `<p class="text-lg font-semibold text-gray-800 mb-3">Questão ${index + 1}) ${q.question}</p>`; // Formato para revisão
+            let reviewDetails = `<p class="text-lg font-semibold text-gray-800 mb-3">Questão ${index + 1}) ${q.question}</p>`;
             if (q.type === 'MCQ' && q.options) {
                 reviewDetails += '<ul class="list-disc pl-5 space-y-2">';
                 q.options.forEach((option, optIndex) => {
                     const optionLetter = String.fromCharCode(65 + optIndex);
                     const isChosen = (userAnswer === optionLetter);
-                    // Compare a letra da opção com a letra da resposta correta
                     const isCorrectOption = (optionLetter.toLowerCase() === cleanCorrectAnswer); 
                     
                     reviewDetails += `<li class="text-gray-700 ${isChosen ? (isCorrect ? 'font-bold text-green-700' : 'font-bold text-red-700') : ''}">
@@ -528,178 +522,16 @@
 
         scoreP.textContent = `Você acertou ${correctAnswers} de ${generatedQuizQuestions.length} questões!`;
         resultsOutputDiv.classList.remove('hidden');
-    });
+    }
 
 
-    // Event Listeners para os botões de Geração
-    generateMCQButton.addEventListener('click', async () => {
-        const numTotalQuestions = parseInt(numQuestionsInput.value);
-        if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
-            showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
-            return;
-        }
-
-        const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
-        let totalRequestedQuestions = 0;
-        const materialPrompts = [];
-
-        studyBlocks.forEach((block, index) => {
-            const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
-            const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
-
-            if (materialText && !isNaN(numRequested) && numRequested > 0) {
-                totalRequestedQuestions += numRequested;
-                materialPrompts.push({
-                    material: materialText,
-                    numQuestions: numRequested
-                });
-            }
-        });
-
-        if (materialPrompts.length === 0) {
-            showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
-            return;
-        }
-
-        if (totalRequestedQuestions !== numTotalQuestions) {
-            showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
-            return;
-        }
-
-        let allGeneratedQuestions = [];
-        for (const { material, numQuestions } of materialPrompts) {
-            const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} questões de múltipla escolha. Para cada questão, forneça a pergunta, 4 opções de resposta (SEM A LETRA DA ALTERNATIVA NO TEXTO DA OPÇÃO, apenas o conteúdo da alternativa), e a letra da resposta correta (A, B, C ou D). Inclua uma breve explicação para a resposta correta e o 'topic' exato do material. O 'type' da questão deve ser 'MCQ'. Responda em formato JSON seguindo o schema fornecido.
-            Material:
-            "${material}"`;
-            
-            const questions = await callGeminiAPI(prompt, 'questions');
-            if (questions) {
-                allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'MCQ'));
-            }
-        }
-        
-        displayQuizQuestions(allGeneratedQuestions);
-    });
-
-    generateTrueFalseButton.addEventListener('click', async () => {
-        const numTotalQuestions = parseInt(numQuestionsInput.value);
-        if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
-            showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
-            return;
-        }
-
-        const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
-        let totalRequestedQuestions = 0;
-        const materialPrompts = [];
-
-        studyBlocks.forEach((block, index) => {
-            const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
-            const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
-
-            if (materialText && !isNaN(numRequested) && numRequested > 0) {
-                totalRequestedQuestions += numRequested;
-                materialPrompts.push({
-                    material: materialText,
-                    numQuestions: numRequested
-                });
-            }
-        });
-
-        if (materialPrompts.length === 0) {
-            showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
-            return;
-        }
-
-        if (totalRequestedQuestions !== numTotalQuestions) {
-            showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
-            return;
-        }
-
-        let allGeneratedQuestions = [];
-        for (const { material, numQuestions } of materialPrompts) {
-            const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} afirmações de Verdadeiro/Falso. Para cada afirmação, forneça a afirmação e a resposta (Verdadeiro ou Falso). Inclua uma breve explicação. O 'type' da questão deve ser 'TrueFalse'. Adicione o 'topic' exato do material. Responda em formato JSON seguindo o schema fornecido.
-            Material:
-            "${material}"`;
-
-            const questions = await callGeminiAPI(prompt, 'questions');
-            if (questions) {
-                allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'TrueFalse'));
-            }
-        }
-        displayQuizQuestions(allGeneratedQuestions);
-    });
-
-    generateOpenEndedButton.addEventListener('click', async () => {
-        const numTotalQuestions = parseInt(numQuestionsInput.value);
-        if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
-            showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
-            return;
-        }
-
-        const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
-        let totalRequestedQuestions = 0;
-        const materialPrompts = [];
-
-        studyBlocks.forEach((block, index) => {
-            const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
-            const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
-
-            if (materialText && !isNaN(numRequested) && numRequested > 0) {
-                totalRequestedQuestions += numRequested;
-                materialPrompts.push({
-                    material: materialText,
-                    numQuestions: numRequested
-                });
-            }
-        });
-
-        if (materialPrompts.length === 0) {
-            showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
-            return;
-        }
-
-        if (totalRequestedQuestions !== numTotalQuestions) {
-            showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
-            return;
-        }
-
-        let allGeneratedQuestions = [];
-        for (const { material, numQuestions } of materialPrompts) {
-            const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} questões abertas. Para cada questão, forneça a pergunta. Inclua uma breve explicação do conceito relacionado à pergunta para ajudar na resposta. O 'type' da questão deve ser 'OpenEnded'. Adicione o 'topic' exato do material. Responda em formato JSON seguindo o schema fornecido.
-            Material:
-            "${material}"`;
-
-            const questions = await callGeminiAPI(prompt, 'questions');
-            if (questions) {
-                allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'OpenEnded'));
-            }
-        }
-        displayQuizQuestions(allGeneratedQuestions);
-    });
-
-    generateSummaryButton.addEventListener('click', async () => {
-        // Para resumo, vamos pegar o material de todos os blocos e concatenar
-        const allMaterials = Array.from(document.querySelectorAll(`textarea[id^="studyMaterial_"]`))
-                               .map(textarea => textarea.value.trim())
-                               .filter(text => text.length > 0)
-                               .join('\n\n---\n\n'); // Concatena com um separador claro
-
-        if (!allMaterials) {
-            showErrorMessage("Por favor, insira material de estudo para gerar o resumo.");
-            return;
-        }
-        const prompt = `Por favor, resuma o seguinte material de estudo em 3-5 frases concisas. Foque nos pontos principais.
-        Material:
-        "${allMaterials}"`;
-        const summary = await callGeminiAPI(prompt, 'summary');
-        if (summary) {
-            displaySummary(summary);
-        }
-    });
-
-    // Chama a inicialização do Firebase após o DOM estar pronto
+    // **********************************************
+    // ESTE É O BLOCO window.onload CORRIGIDO
+    // Tudo que precisa acessar elementos do DOM
+    // ou adicionar event listeners deve estar aqui dentro.
+    // **********************************************
     window.onload = function() {
-        // Atribuição de variáveis dentro de window.onload
+        // Atribuição de variáveis: Todos os elementos DOM são atribuídos aqui.
         apiKeyInput = document.getElementById('apiKey');
         numQuestionsInput = document.getElementById('numQuestions');
         studyMaterialsContainer = document.getElementById('studyMaterialsContainer');
@@ -728,102 +560,188 @@
         // Adiciona o event listener para o botão "Adicionar Outro Assunto"
         addStudyMaterialBlockButton.addEventListener('click', addMaterialBlock);
         
-        // Adiciona event listener para o bloco de material inicial (para que possa ser removido se necessário)
-        // O primeiro bloco tem ID studyMaterial_0. O materialBlockCount começa em 0.
-        // O botão remover no primeiro bloco (criado no HTML) precisa do seu próprio event listener
-        document.querySelector('#studyMaterialsContainer .study-material-block .remove-material-block').addEventListener('click', (e) => {
-            e.target.closest('.study-material-block').remove();
-        });
+        // Adiciona event listener para o botão "Remover" do bloco inicial (ID studyMaterial_0)
+        // Certifique-se que o botão 'Remover' está presente no HTML do primeiro bloco!
+        const firstRemoveButton = document.querySelector('#studyMaterialsContainer .study-material-block .remove-material-block');
+        if (firstRemoveButton) { // Verifica se o botão existe antes de tentar adicionar o listener
+            firstRemoveButton.addEventListener('click', (e) => {
+                e.target.closest('.study-material-block').remove();
+            });
+        } else {
+            console.warn("Botão 'Remover' não encontrado no primeiro bloco de material de estudo. Ele não será removível.");
+        }
 
 
         // Event Listener para o botão de verificar respostas
-        submitAnswersButton.addEventListener('click', () => {
-            let correctAnswers = 0;
-            const userAnswers = [];
-            quizReviewDiv.innerHTML = '';
-            studyRecommendationsList.innerHTML = '';
+        submitAnswersButton.addEventListener('click', checkAnswersAndDisplayResults);
 
-            generatedQuizQuestions.forEach((q, index) => {
-                const userAnswerInput = quizForm.querySelector(`[name="question_${index}"]:checked`) || quizForm.querySelector(`[name="question_${index}"]`);
-                let userAnswer = '';
-                if (userAnswerInput) {
-                    userAnswer = userAnswerInput.value.trim();
-                }
 
-                userAnswers.push({ questionIndex: index, answer: userAnswer });
+        // Event Listeners para os botões de Geração - AGORA ESTÃO NO LUGAR CERTO!
+        generateMCQButton.addEventListener('click', async () => {
+            const numTotalQuestions = parseInt(numQuestionsInput.value);
+            if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
+                showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
+                return;
+            }
 
-                const reviewCard = document.createElement('div');
-                reviewCard.className = 'bg-gray-50 p-5 rounded-lg shadow-sm border border-gray-200';
-                
-                let isCorrect = false;
-                // Normaliza a resposta correta para comparação (ex: remove A), B), C))
-                const cleanCorrectAnswer = q.answer.toString().replace(/^[A-E]\)\s*/, '').toLowerCase();
+            const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
+            let totalRequestedQuestions = 0;
+            const materialPrompts = [];
 
-                if (q.type === 'MCQ' || q.type === 'TrueFalse') {
-                    isCorrect = (userAnswer.toLowerCase() === cleanCorrectAnswer);
-                } else if (q.type === 'OpenEnded') {
-                    isCorrect = userAnswer.length > 0; 
-                }
+            studyBlocks.forEach((block) => {
+                const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
+                const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
 
-                if (isCorrect) {
-                    correctAnswers++;
-                    reviewCard.classList.add('border-green-400');
-                } else {
-                    reviewCard.classList.add('border-red-400');
-                    if (q.topic) {
-                        const existingTopic = Array.from(studyRecommendationsList.children).find(li => li.textContent.includes(q.topic));
-                        if (!existingTopic) {
-                            const li = document.createElement('li');
-                            li.textContent = q.topic;
-                            studyRecommendationsList.appendChild(li);
-                        }
-                    }
-                }
-
-                let reviewDetails = `<p class="text-lg font-semibold text-gray-800 mb-3">Questão ${index + 1}) ${q.question}</p>`;
-                if (q.type === 'MCQ' && q.options) {
-                    reviewDetails += '<ul class="list-disc pl-5 space-y-2">';
-                    q.options.forEach((option, optIndex) => {
-                        const optionLetter = String.fromCharCode(65 + optIndex);
-                        const isChosen = (userAnswer === optionLetter);
-                        const isCorrectOption = (optionLetter.toLowerCase() === cleanCorrectAnswer); 
-                        
-                        reviewDetails += `<li class="text-gray-700 ${isChosen ? (isCorrect ? 'font-bold text-green-700' : 'font-bold text-red-700') : ''}">
-                                                (${optionLetter}) ${option.replace(/^[A-E]\)\s*/, '')} 
-                                                ${isCorrectOption ? '<span class="text-green-600 font-bold">(Correta)</span>' : ''}
-                                              </li>`;
+                if (materialText && !isNaN(numRequested) && numRequested > 0) {
+                    totalRequestedQuestions += numRequested;
+                    materialPrompts.push({
+                        material: materialText,
+                        numQuestions: numRequested
                     });
-                    reviewDetails += '</ul>';
-                } else if (q.type === 'TrueFalse') {
-                    reviewDetails += `<p class="mt-2 text-gray-700">Sua resposta: <span class="${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold">${userAnswer || 'Não respondido'}</span></p>`;
-                } else if (q.type === 'OpenEnded') {
-                     reviewDetails += `<p class="mt-2 text-gray-700">Sua resposta: <span class="${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold">${userAnswer || 'Não respondido'}</span></p>`;
                 }
-                
-                reviewDetails += `<p class="mt-3 text-sm text-gray-600">**Resposta Correta:** ${q.answer}</p>`;
-                if (q.explanation) {
-                    reviewDetails += `<p class="mt-1 text-sm text-gray-600">**Explicação:** ${q.explanation}</p>`;
-                }
-                if (q.topic) {
-                     reviewDetails += `<p class="mt-1 text-sm text-gray-500 italic">Tópico: ${q.topic}</p>`;
-                }
-                
-                reviewCard.innerHTML = reviewDetails;
-                quizReviewDiv.appendChild(reviewCard);
             });
 
-            scoreP.textContent = `Você acertou ${correctAnswers} de ${generatedQuizQuestions.length} questões!`;
-            resultsOutputDiv.classList.remove('hidden');
+            if (materialPrompts.length === 0) {
+                showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
+                return;
+            }
+
+            if (totalRequestedQuestions !== numTotalQuestions) {
+                showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
+                return;
+            }
+
+            let allGeneratedQuestions = [];
+            for (const { material, numQuestions } of materialPrompts) {
+                const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} questões de múltipla escolha. Para cada questão, forneça a pergunta, 4 opções de resposta (SEM A LETRA DA ALTERNATIVA NO TEXTO DA OPÇÃO, apenas o conteúdo da alternativa), e a letra da resposta correta (A, B, C ou D). Inclua uma breve explicação para a resposta correta e o 'topic' exato do material. O 'type' da questão deve ser 'MCQ'. Responda em formato JSON seguindo o schema fornecido.
+                Material:
+                "${material}"`;
+                
+                const questions = await callGeminiAPI(prompt, 'questions');
+                if (questions) {
+                    allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'MCQ'));
+                }
+            }
+            
+            displayQuizQuestions(allGeneratedQuestions);
         });
 
+        generateTrueFalseButton.addEventListener('click', async () => {
+            const numTotalQuestions = parseInt(numQuestionsInput.value);
+            if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
+                showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
+                return;
+            }
 
-        // Event Listeners para os botões de Geração (já estavam no seu código, movidos para dentro do window.onload)
-        generateMCQButton.addEventListener('click', async () => { /* ... sua lógica ... */ });
-        generateTrueFalseButton.addEventListener('click', async () => { /* ... sua lógica ... */ });
-        generateOpenEndedButton.addEventListener('click', async () => { /* ... sua lógica ... */ });
-        generateSummaryButton.addEventListener('click', async () => { /* ... sua lógica ... */ });
+            const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
+            let totalRequestedQuestions = 0;
+            const materialPrompts = [];
 
-        // Chama a inicialização do Firebase após o DOM estar pronto e elementos referenciados
+            studyBlocks.forEach((block) => {
+                const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
+                const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
+
+                if (materialText && !isNaN(numRequested) && numRequested > 0) {
+                    totalRequestedQuestions += numRequested;
+                    materialPrompts.push({
+                        material: materialText,
+                        numQuestions: numRequested
+                    });
+                }
+            });
+
+            if (materialPrompts.length === 0) {
+                showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
+                return;
+            }
+
+            if (totalRequestedQuestions !== numTotalQuestions) {
+                showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
+                return;
+            }
+
+            let allGeneratedQuestions = [];
+            for (const { material, numQuestions } of materialPrompts) {
+                const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} afirmações de Verdadeiro/Falso. Para cada afirmação, forneça a afirmação e a resposta (Verdadeiro ou Falso). Inclua uma breve explicação. O 'type' da questão deve ser 'TrueFalse'. Adicione o 'topic' exato do material. Responda em formato JSON seguindo o schema fornecido.
+                Material:
+                "${material}"`;
+
+                const questions = await callGeminiAPI(prompt, 'questions');
+                if (questions) {
+                    allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'TrueFalse'));
+                }
+            }
+            displayQuizQuestions(allGeneratedQuestions);
+        });
+
+        generateOpenEndedButton.addEventListener('click', async () => {
+            const numTotalQuestions = parseInt(numQuestionsInput.value);
+            if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
+                showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
+                return;
+            }
+
+            const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
+            let totalRequestedQuestions = 0;
+            const materialPrompts = [];
+
+            studyBlocks.forEach((block) => {
+                const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
+                const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
+
+                if (materialText && !isNaN(numRequested) && numRequested > 0) {
+                    totalRequestedQuestions += numRequested;
+                    materialPrompts.push({
+                        material: materialText,
+                        numQuestions: numRequested
+                    });
+                }
+            });
+
+            if (materialPrompts.length === 0) {
+                showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
+                return;
+            }
+
+            if (totalRequestedQuestions !== numTotalQuestions) {
+                showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
+                return;
+            }
+
+            let allGeneratedQuestions = [];
+            for (const { material, numQuestions } of materialPrompts) {
+                const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} questões abertas. Para cada questão, forneça a pergunta. Inclua uma breve explicação do conceito relacionado à pergunta para ajudar na resposta. O 'type' da questão deve ser 'OpenEnded'. Adicione o 'topic' exato do material. Responda em formato JSON seguindo o schema fornecido.
+                Material:
+                "${material}"`;
+
+                const questions = await callGeminiAPI(prompt, 'questions');
+                if (questions) {
+                    allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'OpenEnded'));
+                }
+            }
+            displayQuizQuestions(allGeneratedQuestions);
+        });
+
+        generateSummaryButton.addEventListener('click', async () => {
+            const allMaterials = Array.from(document.querySelectorAll(`textarea[id^="studyMaterial_"]`))
+                                   .map(textarea => textarea.value.trim())
+                                   .filter(text => text.length > 0)
+                                   .join('\n\n---\n\n');
+
+            if (!allMaterials) {
+                showErrorMessage("Por favor, insira material de estudo para gerar o resumo.");
+                return;
+            }
+            const prompt = `Por favor, resuma o seguinte material de estudo em 3-5 frases concisas. Foque nos pontos principais.
+            Material:
+            "${allMaterials}"`;
+            const summary = await callGeminiAPI(prompt, 'summary');
+            if (summary) {
+                displaySummary(summary);
+            }
+        });
+
+        // Chama a inicialização do Firebase APÓS todas as referências de DOM estarem prontas
         initializeFirebase();
     }; // Fim de window.onload
 </script>
