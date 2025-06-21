@@ -106,7 +106,6 @@
             </div>
 
             <div id="errorMessage" class="hidden mt-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
-                <p class="font-bold">Erro!</p>
                 <p id="errorMessageText"></p>
             </div>
         </div>
@@ -178,10 +177,10 @@
     let summaryTextP; 
 
     let loadingIndicator;
-    let errorMessageDiv;
-    let errorMessageText;
+    let errorMessageDiv; // Renomeado para error/success message container
+    let errorMessageText; // Renomeado para error/success message text
 
-    let materialBlockCount = 1; // Começa em 1 para corresponder a "Material de Estudo 1" no HTML
+    // materialBlockCount não será mais globalmente incrementado para IDs, mas a função reindex StudyBlocks vai lidar com a numeração
 
     // --- FUNÇÕES GERAIS (definidas antes de window.onload) ---
 
@@ -216,17 +215,31 @@
         }
     }
 
-    // Função para adicionar um novo bloco de material de estudo
+    /**
+     * Adiciona um novo bloco de material de estudo e retorna a textarea recém-criada.
+     * Calcula o próximo ID disponível e reindexa os blocos existentes.
+     * @returns {HTMLTextAreaElement} A textarea do novo bloco.
+     */
     function addMaterialBlock() {
+        const currentBlocks = Array.from(studyMaterialsContainer.querySelectorAll('.study-material-block'));
+        let nextIndex = 0; // Se não houver blocos, o próximo será 0
+        if (currentBlocks.length > 0) {
+            // Encontra o maior ID existente e adiciona 1
+            const maxId = Math.max(...currentBlocks.map(block => 
+                parseInt(block.querySelector('textarea[id^="studyMaterial_"]').id.split('_')[1])
+            ));
+            nextIndex = maxId + 1;
+        }
+
         const newBlock = document.createElement('div');
         newBlock.className = 'study-material-block border border-gray-200 rounded-lg p-4 bg-gray-50';
         newBlock.innerHTML = `
-            <label for="studyMaterial_${materialBlockCount}" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo ${materialBlockCount + 1} (Assunto):</label>
-            <textarea id="studyMaterial_${materialBlockCount}" rows="6"
+            <label for="studyMaterial_${nextIndex}" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo ${nextIndex + 1} (Assunto):</label>
+            <textarea id="studyMaterial_${nextIndex}" rows="6"
                                     class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 mb-3"
-                                    placeholder="Cole o texto para o Assunto ${materialBlockCount + 1} aqui..."></textarea>
-            <label for="numQuestions_${materialBlockCount}" class="block text-gray-700 text-base font-medium mb-2">Questões para este Assunto:</label>
-            <input type="number" id="numQuestions_${materialBlockCount}" value="0" min="0"
+                                    placeholder="Cole o texto para o Assunto ${nextIndex + 1} aqui..."></textarea>
+            <label for="numQuestions_${nextIndex}" class="block text-gray-700 text-base font-medium mb-2">Questões para este Assunto:</label>
+            <input type="number" id="numQuestions_${nextIndex}" value="0" min="0"
                                class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200">
             <button type="button" class="remove-material-block mt-2 bg-red-400 hover:bg-red-500 text-white text-sm py-1 px-3 rounded">Remover</button>
         `;
@@ -234,19 +247,56 @@
         
         newBlock.querySelector('.remove-material-block').addEventListener('click', (e) => {
             e.target.closest('.study-material-block').remove();
+            reindexStudyBlocks(); // Reindexa após a remoção
         });
 
-        materialBlockCount++;
+        reindexStudyBlocks(); // Reindexa após a adição para garantir ordem
+        return newBlock.querySelector(`textarea[id="studyMaterial_${nextIndex}"]`);
     }
 
-    // Função para mostrar mensagem de erro
+    /**
+     * Reindexa todos os blocos de material de estudo após uma adição ou remoção,
+     * garantindo que os IDs e rótulos estejam em ordem sequencial (0, 1, 2...).
+     */
+    function reindexStudyBlocks() {
+        const allBlocks = Array.from(studyMaterialsContainer.querySelectorAll('.study-material-block'));
+        allBlocks.forEach((block, index) => {
+            const textarea = block.querySelector('textarea[id^="studyMaterial_"]');
+            const numQuestionsInput = block.querySelector('input[id^="numQuestions_"]');
+            const labelTextArea = block.querySelector(`label[for^="studyMaterial_"]`);
+            const labelNumQuestions = block.querySelector(`label[for^="numQuestions_"]`);
+
+            // Atualiza IDs e 'for' atributos
+            textarea.id = `studyMaterial_${index}`;
+            numQuestionsInput.id = `numQuestions_${index}`;
+            labelTextArea.htmlFor = `studyMaterial_${index}`;
+            labelNumQuestions.htmlFor = `numQuestions_${index}`;
+
+            // Atualiza o texto do rótulo
+            labelTextArea.textContent = `Material de Estudo ${index + 1} (Assunto):`;
+            labelNumQuestions.textContent = `Questões para este Assunto:`; // Apenas para garantir
+            
+            // Atualiza o placeholder da textarea (opcional, mas bom para consistência)
+            textarea.placeholder = `Cole o texto para o Assunto ${index + 1} aqui...`;
+        });
+    }
+
+    // Função para mostrar mensagem de ERRO (fundo vermelho)
     function showErrorMessage(message) {
-        errorMessageText.textContent = message;
-        errorMessageDiv.classList.remove('hidden');
+        errorMessageText.innerHTML = `<p class="font-bold">Erro!</p><p>${message}</p>`;
+        errorMessageDiv.classList.remove('hidden', 'bg-green-100', 'border-green-400', 'text-green-700');
+        errorMessageDiv.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
     }
 
-    // Função para ocultar mensagem de erro
-    function hideErrorMessage() {
+    // Função para mostrar mensagem de SUCESSO (fundo verde)
+    function showMessage(message) {
+        errorMessageText.innerHTML = `<p class="font-bold">Sucesso!</p><p>${message}</p>`;
+        errorMessageDiv.classList.remove('hidden', 'bg-red-100', 'border-red-400', 'text-red-700');
+        errorMessageDiv.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+    }
+
+    // Função para ocultar mensagens
+    function hideMessages() {
         errorMessageDiv.classList.add('hidden');
     }
 
@@ -259,7 +309,7 @@
 
     // Função para chamar a API do Gemini
     async function callGeminiAPI(prompt, type = 'questions') {
-        hideErrorMessage();
+        hideMessages(); // Oculta mensagens de sucesso/erro anteriores
         loadingIndicator.classList.remove('hidden');
         hideAllOutputs(); 
 
@@ -519,7 +569,7 @@
         numQuestionsInput = document.getElementById('numQuestions');
         studyMaterialsContainer = document.getElementById('studyMaterialsContainer');
         addStudyMaterialBlockButton = document.getElementById('addStudyMaterialBlock');
-        fileUploadInput = document.getElementById('fileUpload'); // Mantenha aqui
+        fileUploadInput = document.getElementById('fileUpload'); 
 
         generateMCQButton = document.getElementById('generateMCQ');
         generateTrueFalseButton = document.getElementById('generateTrueFalse');
@@ -540,7 +590,7 @@
         errorMessageDiv = document.getElementById('errorMessage');
         errorMessageText = document.getElementById('errorMessageText');
 
-        // Event Listeners (agora atribuídos DEPOIS que os elementos foram encontrados)
+        // Adiciona o event listener para o botão "Adicionar Outro Assunto"
         addStudyMaterialBlockButton.addEventListener('click', addMaterialBlock);
         
         // Listener para o botão "Remover" do bloco inicial (ID studyMaterial_0)
@@ -548,6 +598,7 @@
         if (initialRemoveButton) {
             initialRemoveButton.addEventListener('click', (e) => {
                 e.target.closest('.study-material-block').remove();
+                reindexStudyBlocks(); // Reindexa após a remoção do bloco inicial
             });
         }
         
@@ -563,33 +614,55 @@
             }
 
             loadingIndicator.classList.remove('hidden');
-            hideErrorMessage();
+            hideMessages(); // Oculta todas as mensagens antes de processar
             hideAllOutputs();
-            document.getElementById('studyMaterial_0').value = ''; // Limpar antes de carregar
-
+            
+            let targetTextArea = document.getElementById('studyMaterial_0');
+            // Verifica se o primeiro campo está vazio. Se estiver, preenche ele.
+            // Se não, cria um novo bloco e preenche ele.
+            if (!targetTextArea || targetTextArea.value.trim() !== '') {
+                targetTextArea = addMaterialBlock(); 
+            }
+            
+            targetTextArea.value = ''; // Limpa a textarea antes de carregar (importante se ela já tinha conteúdo ou se é nova)
+            
             try {
                 let fileContent = '';
+                let successMessage = '';
+
                 if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
                     fileContent = await readFileAsText(file);
-                    showErrorMessage("Conteúdo do arquivo TXT carregado com sucesso.");
+                    successMessage = "Conteúdo do arquivo TXT carregado com sucesso.";
                 } else if (file.type === 'application/pdf') {
-                    // pdf.js já está disponível globalmente através do CDN
                     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
                     fileContent = await extractTextFromPdf(file);
-                    showErrorMessage("Conteúdo do arquivo PDF carregado com sucesso.");
+                    successMessage = "Conteúdo do arquivo PDF carregado com sucesso.";
                 } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
-                    // mammoth.js já está disponível globalmente através do CDN
                     fileContent = await extractTextFromDocx(file);
-                    showErrorMessage("Conteúdo do arquivo DOCX carregado com sucesso.");
+                    successMessage = "Conteúdo do arquivo DOCX carregado com sucesso.";
                 } else {
                     showErrorMessage("Formato de arquivo não suportado. Por favor, use .txt, .pdf ou .docx.");
+                    // Se o formato não for suportado e um novo bloco foi criado, remova-o
+                    if (targetTextArea !== document.getElementById('studyMaterial_0')) { // Se não foi o primeiro bloco
+                        targetTextArea.closest('.study-material-block').remove();
+                        reindexStudyBlocks(); // Reindexa após remoção do bloco inválido
+                    }
+                    return; // Sai da função se o formato não for suportado
                 }
                 
-                document.getElementById('studyMaterial_0').value = fileContent;
+                targetTextArea.value = fileContent; // Coloca o conteúdo na textarea
+                showMessage(successMessage + " Agora você pode gerar questões/resumos!"); // Mostra mensagem de sucesso
 
             } catch (error) {
                 console.error("Erro ao processar o arquivo:", error);
                 showErrorMessage(`Erro ao processar o arquivo: ${error.message}.`);
+                // Remove o bloco adicionado se houver erro no processamento
+                if (targetTextArea !== document.getElementById('studyMaterial_0')) { // Se não foi o primeiro bloco
+                    targetTextArea.closest('.study-material-block').remove();
+                    reindexStudyBlocks(); // Reindexa após remoção do bloco inválido
+                } else { // Se foi o primeiro bloco, apenas limpa o conteúdo
+                    targetTextArea.value = '';
+                }
             } finally {
                 loadingIndicator.classList.add('hidden');
                 fileUploadInput.value = ''; // Limpar o input de arquivo
@@ -794,6 +867,7 @@
 
         // Chama a inicialização do Firebase APÓS todas as referências de DOM estarem prontas
         initializeFirebase();
+        reindexStudyBlocks(); // Reindexa os blocos existentes na carga inicial da página
     }; // Fim de window.onload
 </script>
 </body>
