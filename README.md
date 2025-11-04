@@ -1,23 +1,84 @@
-# 🚀 Estudo.IA: Gerador de Questões e Resumos 🧠
+# Estudo.IA: Gerador Inteligente de Questões e Resumos
 
-## Ferramenta Inteligente para Otimizar Seus Estudos
+## 📖 Sobre o Projeto
+
+O Estudo.IA é uma ferramenta de estudo interativa, de página única (Single Page Application), projetada para ajudar estudantes e educadores a transformar materiais de estudo brutos em conteúdo de aprendizado dinâmico. Utilizando a API do Google Gemini, este aplicativo pode ler textos, PDFs e documentos Word para gerar automaticamente questões de múltipla escolha, verdadeiro/falso, perguntas abertas e resumos inteligentes.
+
+Esta versão do projeto utiliza um tema em tons pastéis, focado em uma experiência de usuário limpa, suave e acessível, sem a complexidade de múltiplos temas.
+
+## ✨ Funcionalidades Principais
+
+- Geração com IA: Cria quizzes e resumos usando o poder da API do Google Gemini.
+- Múltiplos tipos de questão: Gera questões de múltipla escolha, verdadeiro/falso e discursivas.
+- Resumos inteligentes: Condensa textos longos em resumos estruturados em formato Markdown.
+- Carregamento de arquivos: Aceita entrada de texto via cópia e cola ou carregamento de arquivos .txt, .pdf e .docx.
+- Quiz interativo: Permite que o usuário responda as questões geradas e verifique seu desempenho.
+- Timer de estudo: Inclui um cronômetro para gerenciamento do tempo de estudo.
+- Exportação de conteúdo: Permite exportar os resultados gerados para .pdf, .json ou .txt.
+- Design responsivo: Interface limpa e adaptável a desktops, tablets e celulares, com um tema pastel agradável.
+- Portabilidade: Todo o aplicativo está contido em um único arquivo index.html, facilitando a distribuição e o uso local.
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Front-end:** HTML5, CSS3 (com Variáveis CSS)
+- **Estilização:** [Tailwind CSS](https://tailwindcss.com/) (carregado via CDN)
+- **Interatividade:** JavaScript (ES6+)
+- **Inteligência Artificial:** [Google Gemini API](https://aistudio.google.com/app/apikey)
+
+### Bibliotecas Externas
+
+- [Font Awesome](https://fontawesome.com/) (para ícones)
+- [pdf.js](https://mozilla.github.io/pdf.js/) (para leitura de arquivos PDF)
+- [Mammoth.js](https://github.com/mwilliamson/mammoth.js) (para leitura de arquivos .docx)
+- [jsPDF](https://github.com/parallax/jsPDF) (para exportação em PDF)
+
+## 🚀 Como Usar
+
+Como este é um projeto de arquivo único, basta abrir o arquivo `index.html` em qualquer navegador moderno.
+
+### Pré-requisito: Chave da API do Google Gemini
+
+Para que as funcionalidades de IA funcionem, você precisa de uma chave de API do Google Gemini.
+
+1. Acesse o [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Faça login com sua conta do Google.
+3. Clique em "Create API key" (Criar chave de API) em um novo projeto.
+4. Copie a chave gerada.
+
+### Executando o Aplicativo
+
+1. Abra o arquivo `index.html`.
+2. Na seção "Configuração Necessária", cole sua chave de API do Google Gemini no campo indicado.
+3. (Opcional) Clique no ícone de salvar para armazenar a chave localmente no seu navegador.
+
+Adicione seu material de estudo:
+
+- Cole o texto diretamente na área "Material 1".
+- Clique em "Selecionar Arquivos" para carregar um arquivo .txt, .pdf ou .docx.
+- Escolha o número de questões, a dificuldade e clique em um dos botões de geração (ex: "Múltipla Escolha").
+- Aguarde o processamento e veja o resultado!
+
+## 🔧 Estrutura do Código
+
+Todo o código-fonte (HTML, CSS e JavaScript) está contido no arquivo `index.html` de forma intencional.
+
+- `<head>`: Contém a importação de todas as CDNs (Tailwind, pdf.js, etc.) e o bloco `<style>` com as variáveis de cor (tema pastel) e estilos customizados.
+- `<body>`: Define a estrutura da interface, incluindo os modais e o rodapé.
+- `<script>` (no final do `<body>`): Contém toda a lógica do aplicativo, incluindo:
+  - Manipulação de eventos (cliques, uploads)
+  - Funções de leitura de arquivos (`processFile`)
+  - Função `callGeminiAPI`, que faz a requisição fetch para a API do Google
+  - Funções de exibição (`displayResult`, `displayQuiz`)
+  - Lógica do timer, estatísticas e exportação
+
+## 📄 Licença
+
+Este projeto é de código aberto e está licenciado sob a [Licença MIT](https://gemini.google.com/u/2/app/LICENSE.md).  
+Sinta-se à vontade para usar, modificar e distribuir o código.
 
 ---
 
-Bem-vindo(a) ao **Estudo.IA**, uma aplicação web inovadora projetada para revolucionar a forma como você estuda e revisa conteúdos. Utilize o poder da Inteligência Artificial do Google Gemini para transformar qualquer texto em **questões personalizadas (múltipla escolha, verdadeiro/falso, abertas)** ou em **resumos concisos**, tudo na ponta dos seus dedos.
-
-Nosso objetivo é simplificar a criação de materiais de estudo, permitindo que você foque no aprendizado ativo e na absorção do conhecimento.
-
----
-
-## ✨ Recursos Principais
-
-O Estudo.IA oferece uma gama de funcionalidades para potencializar sua rotina de estudos:
-
-* **Geração de Questões Diversas:**
-    * **Múltipla Escolha:** Crie testes com opções predefinidas para prática rápida.
-    * **Verdadeiro/Falso:** Ideal para revisar conceitos-chave e identificar falácias.
-    * **Questões Abertas:** Desafie-se a formular respostas detalhadas e aprofundar seu entendimento.
+Feito com ❤️ para ajudar nos estudos.
 * **Resumos Inteligentes:** Obtenha resumos concisos e objetivos de qualquer material, destacando os pontos mais importantes.
 * **Múltiplos Materiais de Estudo:** Insira diferentes blocos de texto e defina o número de questões para cada um, permitindo uma segmentação eficaz do estudo.
 * **Upload de Documentos (em breve):** Preparado para futuras integrações com arquivos `.pdf` e `.docx` para extração automática de conteúdo.
