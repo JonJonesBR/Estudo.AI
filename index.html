@@ -3,872 +3,2266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estudo.IA: Gerador de Questões e Resumos</title>
+    <title>Estudo.AI: Gerador de Questões e Resumos</title>
+    <meta name="description" content="Ferramenta inteligente para gerar questões e resumos usando IA do Google Gemini">
+    <meta name="keywords" content="estudo, AI, questões, resumos, educação">
+    
+    <!-- Scripts externos -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        // Define o worker globalmente para o pdf.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Fontes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
     <style>
+        /* --- NOVA PALETA DE CORES PASTEL --- */
+        :root {
+            --primary-color: #8ecae6; /* Azul céu pastel */
+            --secondary-color: #219ebc; /* Azul-petróleo complementar */
+            --accent-color: #ffb703; /* Amarelo-mostarda suave */
+            --success-color: #83c5be; /* Verde-menta suave */
+            --warning-color: #ffb703; /* Amarelo-mostarda suave */
+            --error-color: #e76f51; /* Vermelho-tijolo suave */
+            
+            /* Fundos limpos e suaves */
+            --bg-primary: #ffffff; /* Branco (cards) */
+            --bg-secondary: #f8f9fa; /* Cinza-gelo (fundo da página) */
+            
+            /* Textos de alto contraste */
+            --text-primary: #023047; /* Azul-marinho escuro (quase preto) */
+            --text-secondary: #495057; /* Cinza-médio */
+            --border-color: #dee2e6; /* Cinza-claro */
+        }
+        /* --- FIM DA NOVA PALETA --- */
+
+        * {
+            transition: all 0.2s ease-in-out;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Cor de fundo suave */
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
+
+        .theme-transition {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white; /* Texto branco funciona bem com este gradiente */
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transform: translateY(0);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px -3px rgba(33, 158, 188, 0.2);
+        }
+        
+        .btn-primary:disabled {
+            background: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(142, 202, 230, 0.3);
+        }
+        
+        /* Estilo para input[type=range] */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        input[type=range]:hover {
+            opacity: 1;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 2s linear infinite;
+            cursor: pointer;
         }
+
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        /* Estilo para input[type=checkbox] */
+        input[type=checkbox] {
+            accent-color: var(--primary-color);
+            width: 16px;
+            height: 16px;
+        }
+
+        .loader {
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 2px;
+            transform: translateX(-100%);
+            animation: progress 3s ease-in-out infinite;
+        }
+
+        @keyframes progress {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--text-primary);
+            color: var(--bg-primary);
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: var(--text-primary); /* Texto escuro para contraste com pastel */
+            border-radius: 12px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-secondary);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: var(--bg-primary);
+            margin: 5% auto;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .close {
+            color: var(--text-secondary);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: var(--text-primary);
+        }
+        
+        /* Estilos para o conteúdo do resumo (Markdown) */
+        .prose {
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+        .prose h1, .prose h2, .prose h3, .prose h4 {
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        .prose h1 { font-size: 1.875rem; } /* text-3xl */
+        .prose h2 { font-size: 1.5rem; } /* text-2xl */
+        .prose h3 { font-size: 1.25rem; } /* text-xl */
+        .prose p { margin-bottom: 1em; }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-bottom: 1em;
+        }
+        .prose li { margin-bottom: 0.25em; }
+        .prose strong { 
+            font-weight: 700; 
+            color: var(--text-primary);
+        }
+        .prose em { font-style: italic; }
+
+
+        @media (max-width: 768px) {
+            /* O container do Tailwind já é responsivo, mas podemos forçar um padding específico */
+            .container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                margin: 10% auto;
+                width: 95%;
+            }
+        }
+        
+        /* Ajuste para telas muito pequenas */
+        @media (max-width: 480px) {
+             .btn-primary, .btn-secondary {
+                 padding: 10px 16px; /* Reduz o padding dos botões */
+                 font-size: 14px; /* Reduz a fonte dos botões */
+             }
+             
+             .card {
+                 padding: 16px; /* Reduz o padding dos cards */
+             }
+             
+             h1.text-2xl {
+                 font-size: 1.25rem; /* Equivalente a text-xl */
+             }
+             
+             .text-3xl {
+                  font-size: 1.5rem; /* Equivalente a text-2xl */
+             }
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            
+            .card {
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+            }
+        }
     </style>
 </head>
-<body class="flex flex-col min-h-screen">
-    <div class="container mx-auto p-4 md:p-8 flex-grow">
-        <h1 class="text-3xl md:text-4xl font-bold text-center text-blue-800 mb-6">Estudo.IA: Gerador de Questões e Resumos</h1>
-        <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
-            Bem-vindo(a) ao Estudo.IA! Insira sua chave API do Google Gemini, cole seu material ou suba um documento.
-            A inteligência artificial irá gerar questões ou um resumo para você estudar!
-        </p>
 
-        <div class="bg-white rounded-lg shadow-xl p-6 md:p-8 mb-8">
-            <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg">
-                <p class="font-bold">Atenção:</p>
-                <p>Para que as funcionalidades de IA funcionem, você precisa inserir sua própria **chave da API do Google Gemini** (Google AI Studio). Esta chave é usada apenas no seu navegador e não é armazenada.</p>
-                <p class="mt-2">Obtenha sua chave em: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio API Key</a></p>
+<body class="theme-transition"> <!-- Removido data-theme="light" -->
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="card text-center">
+            <div class="loader mx-auto mb-4"></div>
+            <p class="text-sm">Processando com IA...</p>
+            <div class="progress-bar mt-4">
+                <div class="progress-fill"></div>
             </div>
-            <div class="mb-6">
-                <label for="apiKey" class="block text-gray-700 text-lg font-semibold mb-2">Sua Chave API do Google Gemini:</label>
-                <input type="text" id="apiKey"
-                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                       placeholder="Cole sua chave API aqui (ex: AIzaSy...).">
-            </div>
-
-            <div class="mb-6">
-                <label for="numQuestions" class="block text-gray-700 text-lg font-semibold mb-2">Número de Questões a Gerar (Total):</label>
-                <input type="number" id="numQuestions" value="5" min="1" max="20"
-                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                       placeholder="Ex: 5">
-            </div>
-
-            <div id="studyMaterialsContainer" class="space-y-6 mb-6">
-                <div class="study-material-block border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <label for="studyMaterial_0" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo 1 (Assunto):</label>
-                    <textarea id="studyMaterial_0" rows="6"
-                                        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 mb-3"
-                                        placeholder="Cole o texto para o Assunto 1 aqui..."></textarea>
-                    <label for="numQuestions_0" class="block text-gray-700 text-base font-medium mb-2">Questões para este Assunto:</label>
-                    <input type="number" id="numQuestions_0" value="0" min="0"
-                                        class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200">
-                    <button type="button" class="remove-material-block mt-2 bg-red-400 hover:bg-red-500 text-white text-sm py-1 px-3 rounded">Remover</button>
-                </div>
-            </div>
-            <button id="addStudyMaterialBlock"
-                    class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out">
-                + Adicionar Outro Assunto
-            </button>
-
-
-            <div class="mb-6 mt-6">
-                <label for="fileUpload" class="block text-gray-700 text-lg font-semibold mb-2">Ou Suba um Documento (.pdf, .docx):</label>
-                <input type="file" id="fileUpload" accept=".pdf,.docx" class="w-full text-gray-700">
-                <p class="text-sm text-gray-500 mt-1">
-                    *Atenção: O processamento de documentos é feito no navegador e pode ser limitado para arquivos grandes ou complexos. O ideal é que o texto seja extraído para a área de texto acima após o upload.
-                </p>
-            </div>
-
-            <div class="mt-6 flex flex-col sm:flex-row justify-center gap-4">
-                <button id="generateMCQ"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
-                    Gerar Múltipla Escolha
-                </button>
-                <button id="generateTrueFalse"
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
-                    Gerar Verdadeiro/Falso
-                </button>
-                <button id="generateOpenEnded"
-                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75">
-                    Gerar Questões Abertas
-                </button>
-                <button id="generateSummary"
-                        class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">
-                    ✨ Gerar Resumo
-                </button>
-            </div>
-
-            <div id="loadingIndicator" class="hidden flex justify-center items-center mt-8">
-                <div class="loader"></div>
-                <span class="ml-4 text-blue-600 text-lg">Gerando conteúdo...</span>
-            </div>
-
-            <div id="errorMessage" class="hidden mt-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
-                <p id="errorMessageText"></p>
-            </div>
-        </div>
-
-        <div id="summaryOutput" class="bg-white rounded-lg shadow-xl p-6 md:p-8 mt-8 hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Resumo do Material:</h2>
-            <p id="summaryText" class="text-gray-700 leading-relaxed"></p>
-        </div>
-
-        <div id="questionsOutput" class="bg-white rounded-lg shadow-xl p-6 md:p-8 mt-8 hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Suas Questões:</h2>
-            <form id="quizForm" class="space-y-6">
-                </form>
-            <button id="submitAnswers"
-                    class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 hidden">
-                Verificar Respostas
-            </button>
-        </div>
-
-        <div id="resultsOutput" class="bg-white rounded-lg shadow-xl p-6 md:p-8 mt-8 hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Seu Desempenho:</h2>
-            <p id="score" class="text-xl font-bold mb-4"></p>
-            <div id="quizReview" class="space-y-6">
-                </div>
-            <h3 class="text-xl font-bold text-gray-800 mt-8 mb-4">Onde Estudar Mais:</h3>
-            <ul id="studyRecommendations" class="list-disc pl-5 text-gray-700">
-                </ul>
         </div>
     </div>
 
-    <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    // getFirestore não é usado atualmente na lógica, então podemos remover se não for planejado para uso futuro imediato
-    // import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Header -->
+    <header class="card no-print mb-6 sticky top-0 z-40">
+        <div class="container mx-auto">
+            <!-- AJUSTE: Alterado para flex-col em telas pequenas (sm) e flex-row em telas maiores, com gap -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-brain text-3xl" style="color: var(--primary-color);"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold" style="color: var(--secondary-color);">Estudo.AI</h1>
+                        <p class="text-sm" style="color: var(--text-secondary);">Gerador Inteligente de Questões</p>
+                    </div>
+                </div>
+                
+                <!-- AJUSTE: Botão de Tema Removido -->
+                <div class="flex items-center space-x-2 sm:space-x-4 flex-wrap justify-center">
+                    <!-- Settings -->
+                    <button id="settingsBtn" class="btn-secondary tooltip">
+                        <i class="fas fa-cog"></i>
+                        <span class="tooltiptext">Configurações</span>
+                    </button>
+                    
+                    <!-- Stats -->
+                    <button id="statsBtn" class="btn-secondary tooltip">
+                        <i class="fas fa-chart-bar"></i>
+                        <span class="tooltiptext">Estatísticas</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
 
-    // Variáveis globais fornecidas pelo ambiente Canvas - Mantidas, mas serão tratadas como opcionais.
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+    <!-- AJUSTE: O padding horizontal (px-4) foi movido do container para o body (ou pode ser aplicado ao container globalmente) -->
+    <div class="container mx-auto flex-grow px-4 sm:px-0">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb no-print">
+            <i class="fas fa-home"></i>
+            <span class="breadcrumb-separator">/</span>
+            <span id="currentStep">Início</span>
+        </nav>
 
-    let app;
-    // let db; // Não usado no momento
-    let auth;
-    let userId = 'anonymous'; 
-    let generatedQuizQuestions = []; 
+        <!-- Welcome Section -->
+        <div id="welcomeSection" class="card mb-8 fade-in">
+            <div class="text-center mb-6">
+                <h2 class="text-3xl font-bold mb-4">Bem-vindo ao Estudo.AI!</h2>
+                <p class="text-lg max-w-3xl mx-auto" style="color: var(--text-secondary);">
+                    Transforme seus materiais de estudo em questões personalizadas ou resumos inteligentes usando o poder da IA.
+                </p>
+            </div>
 
-    // Declarações de variáveis no escopo do módulo para garantir acessibilidade
-    // (Serão atribuídas DENTRO de window.onload)
-    let apiKeyInput;
-    let numQuestionsInput;
-    let studyMaterialsContainer;
-    let addStudyMaterialBlockButton;
-    let fileUploadInput;
+            <!-- Quick Stats -->
+            <div class="stats-grid mb-6">
+                <div class="stat-card">
+                    <i class="fas fa-question-circle text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold" id="totalQuestionsStat">0</div>
+                    <div class="text-sm opacity-90">Questões Geradas</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-file-alt text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold" id="totalSummariesStat">0</div>
+                    <div class="text-sm opacity-90">Resumos Criados</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold" id="studyTimeStat">0m</div>
+                    <div class="text-sm opacity-90">Tempo de Estudo</div>
+                </div>
+            </div>
 
-    let generateMCQButton;
-    let generateTrueFalseButton;
-    let generateOpenEndedButton;
-    let generateSummaryButton;
+            <!-- API Key Section -->
+            <div class="mb-6 p-4 border rounded-lg" style="background-color: #fffbeb; border-color: #fde68a; color: #b45309;">
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-exclamation-triangle text-xl mt-1"></i>
+                    <div>
+                        <p class="font-bold">Configuração Necessária:</p>
+                        <p class="mb-2">Para usar as funcionalidades de IA, insira sua chave da API do Google Gemini:</p>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:underline" style="color: var(--secondary-color);">
+                            <i class="fas fa-external-link-alt"></i> Obter Chave API Gratuita
+                        </a>
+                    </div>
+                </div>
+            </div>
 
-    let questionsOutputDiv;
-    let quizForm;
-    let submitAnswersButton;
-    let resultsOutputDiv;
-    let scoreP;
-    let quizReviewDiv;
-    let studyRecommendationsList;
-    let summaryOutputDiv; 
-    let summaryTextP; 
+            <div class="mb-6">
+                <label for="apiKey" class="block text-sm font-medium mb-2">
+                    <i class="fas fa-key"></i> Chave API do Google Gemini:
+                </label>
+                <!-- AJUSTE: Adicionado flex-wrap para quebra de linha em telas pequenas -->
+                <div class="flex flex-wrap sm:flex-nowrap gap-2">
+                    <input 
+                        type="password" 
+                        id="apiKey" 
+                        class="input-field flex-1 min-w-[200px]"
+                        placeholder="Insira sua chave API aqui..."
+                        aria-label="Chave API do Google Gemini"
+                    >
+                    <button id="toggleApiKey" class="btn-secondary tooltip">
+                        <i class="fas fa-eye"></i>
+                        <span class="tooltiptext">Mostrar/ocultar chave</span>
+                    </button>
+                    <button id="saveApiKey" class="btn-primary tooltip">
+                        <i class="fas fa-save"></i>
+                        <span class="tooltiptext">Salvar localmente (opcional)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    let loadingIndicator;
-    let errorMessageDiv; // Renomeado para error/success message container
-    let errorMessageText; // Renomeado para error/success message text
+        <!-- Main Content -->
+        <!-- AJUSTE: Alterado de lg:grid-cols-3 para md:grid-cols-3 para layout mudar em telas médias -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Input Section -->
+            <!-- AJUSTE: Alterado de lg:col-span-2 para md:col-span-2 -->
+            <div class="md:col-span-2">
+                <div class="card mb-6">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-edit" style="color: var(--primary-color);"></i>
+                        <span class="ml-2">Material de Estudo</span>
+                    </h3>
 
-    // materialBlockCount não será mais globalmente incrementado para IDs, mas a função reindex StudyBlocks vai lidar com a numeração
+                    <!-- File Upload -->
+                    <div class="mb-6 p-4 border-2 border-dashed rounded-lg text-center" style="border-color: var(--border-color);">
+                        <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                        <p class="text-sm mb-2" style="color: var(--text-secondary);">Arraste arquivos aqui ou clique para selecionar</p>
+                        <input type="file" id="fileInput" class="hidden" accept=".pdf,.docx,.txt" multiple>
+                        <button id="fileSelectBtn" class="btn-secondary">
+                            <i class="fas fa-folder-open"></i> Selecionar Arquivos
+                        </button>
+                        <div id="fileList" class="mt-2 text-sm" style="color: var(--text-secondary);"></div>
+                    </div>
 
-    // --- FUNÇÕES GERAIS (definidas antes de window.onload) ---
+                    <!-- Study Materials -->
+                    <div id="studyMaterials">
+                        <div class="study-block mb-4">
+                            <!-- AJUSTE: Adicionado flex-wrap para telas pequenas -->
+                            <div class="flex flex-wrap items-center justify-between mb-2 gap-2">
+                                <label class="block text-sm font-medium">
+                                    <i class="fas fa-book"></i> Material 1:
+                                </label>
+                                <div class="flex items-center space-x-2">
+                                    <input 
+                                        type="number" 
+                                        class="input-field w-20" 
+                                        placeholder="5" 
+                                        min="1" 
+                                        max="50"
+                                        aria-label="Número de questões para este material"
+                                    >
+                                    <span class="text-sm" style="color: var(--text-secondary);">questões</span>
+                                </div>
+                            </div>
+                            <textarea 
+                                class="input-field h-32 resize-none" 
+                                placeholder="Cole seu material de estudo aqui... (artigos, anotações, livros, etc.)"
+                                aria-label="Material de estudo 1"
+                            ></textarea>
+                            <div class="text-xs mt-1" style="color: var(--text-secondary);">
+                                <span class="char-count">0</span> caracteres
+                            </div>
+                        </div>
+                    </div>
 
-    // Função para inicializar Firebase e autenticar
-    async function initializeFirebase() {
-        try {
-            if (Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey && firebaseConfig.projectId) {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
+                    <button id="addMaterialBtn" class="btn-secondary w-full mb-4">
+                        <i class="fas fa-plus"></i> Adicionar Outro Material
+                    </button>
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        console.log("Usuário autenticado com UID:", userId);
-                    } else {
-                        signInAnonymously(auth).then(userCredential => {
-                            userId = userCredential.user.uid;
-                            console.log("Usuário autenticado anonimamente:", userId);
-                        }).catch(error => {
-                            console.error("Erro ao autenticar anonimamente:", error);
-                            userId = crypto.randomUUID(); // Fallback final se nada funcionar
-                        });
-                    }
-                });
-            } else {
-                console.warn("Configuração do Firebase vazia ou inválida. Firebase não será inicializado.");
-                userId = crypto.randomUUID(); // Gera um UUID para um usuário temporário
-            }
-        } catch (error) {
-            console.error("Erro ao inicializar Firebase ou autenticar:", error);
-            showErrorMessage(`Falha na inicialização do Firebase: ${error.message}.`);
-        }
-    }
+                    <!-- Settings Row -->
+                    <!-- AJUSTE: Alterado para 1 coluna em telas pequenas e 2 em sm+ -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-hashtag"></i> Total de Questões:
+                            </label>
+                            <input 
+                                type="number" 
+                                id="totalQuestionsInput"
+                                class="input-field" 
+                                value="5" 
+                                min="1" 
+                                max="50"
+                                aria-label="Número total de questões"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">
+                                <i class="fas fa-layer-group"></i> Dificuldade:
+                            </label>
+                            <select id="difficulty" class="input-field" aria-label="Nível de dificuldade">
+                                <option value="easy">Fácil</option>
+                                <option value="medium" selected>Médio</option>
+                                <option value="hard">Difícil</option>
+                                <option value="mixed">Misto</option>
+                            </select>
+                        </div>
+                    </div>
 
-    /**
-     * Adiciona um novo bloco de material de estudo e retorna a textarea recém-criada.
-     * Calcula o próximo ID disponível e reindexa os blocos existentes.
-     * @returns {HTMLTextAreaElement} A textarea do novo bloco.
-     */
-    function addMaterialBlock() {
-        const currentBlocks = Array.from(studyMaterialsContainer.querySelectorAll('.study-material-block'));
-        let nextIndex = 0; // Se não houver blocos, o próximo será 0
-        if (currentBlocks.length > 0) {
-            // Encontra o maior ID existente e adiciona 1
-            const maxId = Math.max(...currentBlocks.map(block => 
-                parseInt(block.querySelector('textarea[id^="studyMaterial_"]').id.split('_')[1])
-            ));
-            nextIndex = maxId + 1;
-        }
+                    <!-- Action Buttons -->
+                    <!-- AJUSTE: grid-cols-2 em telas pequenas e sm, lg:grid-cols-4 mantido -->
+                    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <button id="generateMultiple" class="btn-primary">
+                            <i class="fas fa-list-ul"></i> Múltipla Escolha
+                        </button>
+                        <button id="generateTrueFalse" class="btn-primary">
+                            <i class="fas fa-check-circle"></i> Verdadeiro/Falso
+                        </button>
+                        <button id="generateOpen" class="btn-primary">
+                            <i class="fas fa-pen"></i> Questões Abertas
+                        </button>
+                        <button id="generateSummary" class="btn-primary">
+                            <i class="fas fa-file-alt"></i> Resumo
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-        const newBlock = document.createElement('div');
-        newBlock.className = 'study-material-block border border-gray-200 rounded-lg p-4 bg-gray-50';
-        newBlock.innerHTML = `
-            <label for="studyMaterial_${nextIndex}" class="block text-gray-700 text-lg font-semibold mb-3">Material de Estudo ${nextIndex + 1} (Assunto):</label>
-            <textarea id="studyMaterial_${nextIndex}" rows="6"
-                                    class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 mb-3"
-                                    placeholder="Cole o texto para o Assunto ${nextIndex + 1} aqui..."></textarea>
-            <label for="numQuestions_${nextIndex}" class="block text-gray-700 text-base font-medium mb-2">Questões para este Assunto:</label>
-            <input type="number" id="numQuestions_${nextIndex}" value="0" min="0"
-                               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200">
-            <button type="button" class="remove-material-block mt-2 bg-red-400 hover:bg-red-500 text-white text-sm py-1 px-3 rounded">Remover</button>
-        `;
-        studyMaterialsContainer.appendChild(newBlock);
-        
-        newBlock.querySelector('.remove-material-block').addEventListener('click', (e) => {
-            e.target.closest('.study-material-block').remove();
-            reindexStudyBlocks(); // Reindexa após a remoção
-        });
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Quick Actions -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-bolt" style="color: var(--accent-color);"></i>
+                        <span class="ml-2">Ações Rápidas</span>
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="clearAll" class="btn-secondary w-full">
+                            <i class="fas fa-trash"></i> Limpar Tudo
+                        </button>
+                        <button id="exportBtn" class="btn-secondary w-full">
+                            <i class="fas fa-download"></i> Exportar
+                        </button>
+                        <button id="printBtn" class="btn-secondary w-full">
+                            <i class="fas fa-print"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
 
-        reindexStudyBlocks(); // Reindexa após a adição para garantir ordem
-        return newBlock.querySelector(`textarea[id="studyMaterial_${nextIndex}"]`);
-    }
+                <!-- Timer Widget -->
+                <div id="timerWidget" class="card hidden">
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-stopwatch" style="color: var(--success-color);"></i>
+                        <span class="ml-2">Timer do Quiz</span>
+                    </h3>
+                    <div class="text-center">
+                        <div id="timerDisplay" class="timer-display mb-4">00:00</div>
+                        <!-- AJUSTE: Botões do timer podem quebrar linha em telas pequenas -->
+                        <div class="flex flex-wrap gap-2">
+                            <button id="startTimer" class="btn-primary flex-1">
+                                <i class="fas fa-play"></i> Iniciar
+                            </button>
+                            <button id="pauseTimer" class="btn-secondary flex-1">
+                                <i class="fas fa-pause"></i> Pausar
+                            </button>
+                            <button id="resetTimer" class="btn-secondary flex-1">
+                                <i class="fas fa-stop"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-    /**
-     * Reindexa todos os blocos de material de estudo após uma adição ou remoção,
-     * garantindo que os IDs e rótulos estejam em ordem sequencial (0, 1, 2...).
-     */
-    function reindexStudyBlocks() {
-        const allBlocks = Array.from(studyMaterialsContainer.querySelectorAll('.study-material-block'));
-        allBlocks.forEach((block, index) => {
-            const textarea = block.querySelector('textarea[id^="studyMaterial_"]');
-            const numQuestionsInput = block.querySelector('input[id^="numQuestions_"]');
-            const labelTextArea = block.querySelector(`label[for^="studyMaterial_"]`);
-            const labelNumQuestions = block.querySelector(`label[for^="numQuestions_"]`);
+                <!-- Recent Sessions -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-history" style="color: #9b59b6;"></i> <!-- Roxo pastel -->
+                        <span class="ml-2">Sessões Recentes</span>
+                    </h3>
+                    <div id="recentSessions" class="space-y-2">
+                        <p class="text-sm text-center py-4" style="color: var(--text-secondary);">
+                            Nenhuma sessão ainda
+                        </p>
+                    </div>
+                </div>
 
-            // Atualiza IDs e 'for' atributos
-            textarea.id = `studyMaterial_${index}`;
-            numQuestionsInput.id = `numQuestions_${index}`;
-            labelTextArea.htmlFor = `studyMaterial_${index}`;
-            labelNumQuestions.htmlFor = `numQuestions_${index}`;
+                <!-- Keyboard Shortcuts -->
+                <div class="card">
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-keyboard" style="color: var(--text-secondary);"></i>
+                        <span class="ml-2">Atalhos</span>
+                    </h3>
+                    <div class="text-sm space-y-1">
+                        <div class="flex justify-between">
+                            <span>Ctrl + M</span>
+                            <span>Múltipla Escolha</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Ctrl + T</span>
+                            <span>Verdadeiro/Falso</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Ctrl + S</span>
+                            <span>Resumo</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Ctrl + D</span>
+                            <span>Tema (Removido)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            // Atualiza o texto do rótulo
-            labelTextArea.textContent = `Material de Estudo ${index + 1} (Assunto):`;
-            labelNumQuestions.textContent = `Questões para este Assunto:`; // Apenas para garantir
+        <!-- Output Section -->
+        <div id="outputSection" class="mt-8 hidden">
+            <!-- Results Header -->
+            <div class="card mb-6">
+                <!-- AJUSTE: flex-col em telas pequenas, sm:flex-row em maiores -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <h2 class="text-2xl font-bold">
+                        <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                        <span class="ml-2">Resultado Gerado</span>
+                    </h2>
+                    <div class="flex items-center space-x-2">
+                        <button id="regenerateBtn" class="btn-secondary tooltip">
+                            <i class="fas fa-redo"></i>
+                            <span class="tooltiptext">Regenerar conteúdo</span>
+                        </button>
+                        <button id="searchBtn" class="btn-secondary tooltip">
+                            <i class="fas fa-search"></i>
+                            <span class="tooltiptext">Buscar no conteúdo</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div id="searchBar" class="mt-4 hidden">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="input-field" 
+                        placeholder="Buscar questões ou conteúdo..."
+                    >
+                </div>
+            </div>
+
+            <!-- Quiz Section -->
+            <div id="quizSection" class="hidden">
+                <div class="card">
+                    <!-- AJUSTE: flex-col em telas pequenas, sm:flex-row em maiores -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <h3 class="text-xl font-semibold">Quiz Interativo</h3>
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div id="quizProgress" class="text-sm" style="color: var(--text-secondary);">
+                                Questão <span id="currentQuestion">1</span> de <span id="totalQuizQuestions">5</span>
+                            </div>
+                            <button id="checkAnswers" class="btn-primary">
+                                <i class="fas fa-check"></i> Verificar Respostas
+                            </button>
+                        </div>
+                    </div>
+                    <div id="questionsContainer"></div>
+                    
+                    <!-- Quiz Results -->
+                    <div id="quizResults" class="hidden mt-6 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold mb-4">Resultados do Quiz</h4>
+                        <!-- AJUSTE: md:grid-cols-3 para 3 colunas em telas médias -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="text-center p-4 rounded-lg" style="background-color: #f0fdf4;">
+                                <div class="text-2xl font-bold" style="color: var(--success-color);" id="correctCount">0</div>
+                                <div class="text-sm" style="color: var(--success-color);">Corretas</div>
+                            </div>
+                            <div class="text-center p-4 rounded-lg" style="background-color: #fef2f2;">
+                                <div class="text-2xl font-bold" style="color: var(--error-color);" id="incorrectCount">0</div>
+                                <div class="text-sm" style="color: var(--error-color);">Incorretas</div>
+                            </div>
+                            <div class="text-center p-4 rounded-lg" style="background-color: #eff6ff;">
+                                <div class="text-2xl font-bold" style="color: var(--primary-color);" id="scorePercent">0%</div>
+                                <div class="text-sm" style="color: var(--primary-color);">Aproveitamento</div>
+                            </div>
+                        </div>
+                        <div id="recommendations" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Section -->
+            <div id="summarySection" class="hidden">
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4">Resumo Inteligente</h3>
+                    <!-- AJUSTE: Adicionado overflow-x-auto para evitar quebra de layout por conteúdo largo (ex: tabelas) -->
+                    <div id="summaryContent" class="prose max-w-none overflow-x-auto"></div>
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="card mt-6 no-print">
+                <h3 class="text-lg font-semibold mb-4">Opções de Exportação</h3>
+                <div class="flex flex-wrap gap-2">
+                    <button id="exportPDF" class="btn-secondary">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button id="exportJSON" class="btn-secondary">
+                        <i class="fas fa-file-code"></i> JSON
+                    </button>
+                    <button id="exportTXT" class="btn-secondary">
+                        <i class="fas fa-file-alt"></i> Texto
+                    </button>
+                    <button id="shareBtn" class="btn-secondary">
+                        <i class="fas fa-share"></i> Compartilhar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Messages -->
+        <div id="errorMessage" class="fixed top-4 right-4 text-white p-4 rounded-lg shadow-lg hidden z-50 max-w-[90vw]" style="background-color: var(--error-color);">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText"></span>
+                <button id="closeError" class="ml-4 text-white hover:text-gray-200" aria-label="Fechar erro">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Success Messages -->
+        <div id="successMessage" class="fixed top-4 right-4 text-white p-4 rounded-lg shadow-lg hidden z-50 max-w-[90vw]" style="background-color: var(--success-color);">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-check-circle"></i>
+                <span id="successText"></span>
+                <button id="closeSuccess" class="ml-4 text-white hover:text-gray-200" aria-label="Fechar sucesso">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">
+                    <i class="fas fa-cog mr-2"></i>
+                    Configurações
+                </h2>
+                <span class="close" onclick="closeModal('settingsModal')">&times;</span>
+            </div>
             
-            // Atualiza o placeholder da textarea (opcional, mas bom para consistência)
-            textarea.placeholder = `Cole o texto para o Assunto ${index + 1} aqui...`;
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-medium mb-3">Preferências de IA</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Modelo de IA:</label>
+                            <select id="aiModel" class="input-field">
+                                <option value="gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash (Recomendado)</option>
+                                <option value="gemini-pro">Gemini Pro (Mais antigo)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Temperatura (Criatividade):</label>
+                            <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7" class="w-full">
+                            <div class="text-sm" style="color: var(--text-secondary);">Valor: <span id="tempValue">0.7</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-medium mb-3">Interface</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="autoSave" class="rounded">
+                            <label for="autoSave">Salvar progresso automaticamente</label>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="soundEffects" class="rounded">
+                            <label for="soundEffects">Efeitos sonoros</label>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="animations" class="rounded" checked>
+                            <label for="animations">Animações</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-medium mb-3">Quiz</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Tempo padrão (minutos):</label>
+                            <input type="number" id="defaultTime" class="input-field" value="15" min="1" max="120">
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="showExplanations" class="rounded" checked>
+                            <label for="showExplanations">Mostrar explicações das respostas</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-4 mt-8">
+                <button onclick="closeModal('settingsModal')" class="btn-secondary">Cancelar</button>
+                <button id="saveSettings" class="btn-primary">Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Estatísticas de Estudo
+                </h2>
+                <span class="close" onclick="closeModal('statsModal')">&times;</span>
+            </div>
+            
+            <div id="statsContent">
+                <!-- Stats will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button id="scrollTop" class="floating-action hidden">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <footer class="text-center py-8 no-print px-4" style="color: var(--text-secondary);">
+        <p>&copy; 2024 Estudo.AI - Ferramenta de estudo inteligente com IA</p>
+        <p class="text-sm mt-2">
+            <kbd>Ctrl + ?</kbd> para ver todos os atalhos
+        </p>
+    </footer>
+
+    <!-- #################### SCRIPT BLOCK #################### -->
+    <script>
+        // Global variables
+        // let currentTheme = 'light'; // Removido
+        let timerInterval = null;
+        let timerSeconds = 0;
+        let isTimerRunning = false;
+        let studyStats = JSON.parse(localStorage.getItem('studyStats')) || {
+            totalQuestions: 0,
+            totalSummaries: 0,
+            totalStudyTime: 0,
+            correctAnswers: 0,
+            incorrectAnswers: 0,
+            sessions: []
+        };
+        // Armazena o último tipo de geração para o botão "Regenerar"
+        let lastGenerationType = null; 
+        let isGenerating = false; // Trava para evitar cliques duplos
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            loadSettings();
+            updateStatsDisplay();
         });
-    }
 
-    // Função para mostrar mensagem de ERRO (fundo vermelho)
-    function showErrorMessage(message) {
-        errorMessageText.innerHTML = `<p class="font-bold">Erro!</p><p>${message}</p>`;
-        errorMessageDiv.classList.remove('hidden', 'bg-green-100', 'border-green-400', 'text-green-700');
-        errorMessageDiv.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
-    }
+        function initializeApp() {
+            // Load saved API key
+            const savedApiKey = localStorage.getItem('gemini-api-key');
+            if (savedApiKey) {
+                document.getElementById('apiKey').value = savedApiKey;
+            }
 
-    // Função para mostrar mensagem de SUCESSO (fundo verde)
-    function showMessage(message) {
-        errorMessageText.innerHTML = `<p class="font-bold">Sucesso!</p><p>${message}</p>`;
-        errorMessageDiv.classList.remove('hidden', 'bg-red-100', 'border-red-400', 'text-red-700');
-        errorMessageDiv.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
-    }
+            // Load saved theme - REMOVIDO
+            // const savedTheme = localStorage.getItem('theme') || 'light';
+            // setTheme(savedTheme);
 
-    // Função para ocultar mensagens
-    function hideMessages() {
-        errorMessageDiv.classList.add('hidden');
-    }
-
-    // Helper para mostrar/esconder seções de output
-    function hideAllOutputs() {
-        questionsOutputDiv.classList.add('hidden');
-        summaryOutputDiv.classList.add('hidden');
-        resultsOutputDiv.classList.add('hidden');
-    }
-
-    // Função para chamar a API do Gemini
-    async function callGeminiAPI(prompt, type = 'questions') {
-        hideMessages(); // Oculta mensagens de sucesso/erro anteriores
-        loadingIndicator.classList.remove('hidden');
-        hideAllOutputs(); 
-
-        const currentApiKey = apiKeyInput.value.trim();
-        if (!currentApiKey) {
-            showErrorMessage("Por favor, insira sua chave da API do Google Gemini para usar os recursos de IA.");
-            loadingIndicator.classList.add('hidden');
-            return null;
+            // Setup character counters
+            setupCharacterCounters();
         }
 
-        const chatHistory = [];
-        chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+        function setupEventListeners() {
+            // Theme toggle - REMOVIDO
+            // document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-        let payload;
-        if (type === 'questions') {
-            payload = {
-                contents: chatHistory,
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            "questions": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "type": { "type": "STRING" }, 
-                                        "question": { "type": "STRING" },
-                                        "options": {
-                                            "type": "ARRAY",
-                                            "items": { "type": "STRING" }
-                                        },
-                                        "answer": { "type": "STRING" }, 
-                                        "explanation": { "type": "STRING" },
-                                        "topic": { "type": "STRING" }
-                                    },
-                                    "required": ["type", "question", "answer", "explanation", "topic"]
-                                }
-                            }
-                        }
+            // API Key management
+            document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
+            document.getElementById('saveApiKey').addEventListener('click', saveApiKey);
+
+            // File handling
+            document.getElementById('fileSelectBtn').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+            // Material management
+            document.getElementById('addMaterialBtn').addEventListener('click', addMaterialBlock);
+
+            // Generation buttons
+            document.getElementById('generateMultiple').addEventListener('click', () => generateContent('multiple'));
+            document.getElementById('generateTrueFalse').addEventListener('click', () => generateContent('truefalse'));
+            document.getElementById('generateOpen').addEventListener('click', () => generateContent('open'));
+            document.getElementById('generateSummary').addEventListener('click', () => generateContent('summary'));
+
+            // Quick actions
+            document.getElementById('clearAll').addEventListener('click', clearAll);
+            document.getElementById('exportBtn').addEventListener('click', showExportOptions);
+            document.getElementById('printBtn').addEventListener('click', printContent);
+
+            // Timer controls
+            document.getElementById('startTimer').addEventListener('click', startTimer);
+            document.getElementById('pauseTimer').addEventListener('click', pauseTimer);
+            document.getElementById('resetTimer').addEventListener('click', resetTimer);
+
+            // Modal controls
+            document.getElementById('settingsBtn').addEventListener('click', () => openModal('settingsModal'));
+            document.getElementById('statsBtn').addEventListener('click', () => openModal('statsModal'));
+            document.getElementById('saveSettings').addEventListener('click', saveSettings);
+
+            // Export options
+            document.getElementById('exportPDF').addEventListener('click', exportToPDF);
+            document.getElementById('exportJSON').addEventListener('click', exportToJSON);
+            document.getElementById('exportTXT').addEventListener('click', exportToTXT);
+
+            // Quiz controls
+            document.getElementById('checkAnswers').addEventListener('click', checkQuizAnswers);
+            document.getElementById('regenerateBtn').addEventListener('click', regenerateContent);
+            document.getElementById('searchBtn').addEventListener('click', toggleSearch);
+
+            // Message controls
+            document.getElementById('closeError').addEventListener('click', () => hideMessage('error'));
+            document.getElementById('closeSuccess').addEventListener('click', () => hideMessage('success'));
+
+            // Scroll to top
+            document.getElementById('scrollTop').addEventListener('click', scrollToTop);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+
+            // Auto-hide scroll button
+            window.addEventListener('scroll', handleScroll);
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', searchContent);
+
+            // Settings sliders
+            document.getElementById('temperature').addEventListener('input', (e) => {
+                document.getElementById('tempValue').textContent = e.target.value;
+            });
+        }
+
+        // Theme management - REMOVIDO
+        // function toggleTheme() { ... }
+        // function setTheme(theme) { ... }
+
+        // API Key management
+        function toggleApiKeyVisibility() {
+            const apiKeyInput = document.getElementById('apiKey');
+            const toggleIcon = document.querySelector('#toggleApiKey i');
+            
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+            }
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (apiKey) {
+                localStorage.setItem('gemini-api-key', apiKey);
+                showMessage('success', 'Chave API salva localmente com sucesso!');
+            } else {
+                showMessage('error', 'Por favor, insira uma chave API válida.');
+            }
+        }
+
+        // Material management
+        function addMaterialBlock() {
+            const container = document.getElementById('studyMaterials');
+            const blockCount = container.querySelectorAll('.study-block').length + 1;
+            
+            const newBlock = document.createElement('div');
+            newBlock.className = 'study-block mb-4 slide-in';
+            newBlock.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between mb-2 gap-2">
+                    <label class="block text-sm font-medium">
+                        <i class="fas fa-book"></i> Material ${blockCount}:
+                    </label>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" class="input-field w-20" placeholder="5" min="1" max="50" aria-label="Número de questões para este material ${blockCount}">
+                        <span class="text-sm" style="color: var(--text-secondary);">questões</span>
+                        <button class="btn-secondary remove-block !p-2" onclick="removeBlock(this)" aria-label="Remover Material ${blockCount}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea class="input-field h-32 resize-none" placeholder="Cole seu material de estudo aqui..." aria-label="Material de estudo ${blockCount}"></textarea>
+                <div class="text-xs mt-1" style="color: var(--text-secondary);">
+                    <span class="char-count">0</span> caracteres
+                </div>
+            `;
+            
+            container.appendChild(newBlock);
+            setupCharacterCounters(); // Re-aplicar contadores
+        }
+
+        function removeBlock(button) {
+            // Não permite remover o último bloco
+            if (document.querySelectorAll('.study-block').length === 1) {
+                showMessage('warning', 'Você não pode remover o último bloco de material.');
+                return;
+            }
+            const block = button.closest('.study-block');
+            block.remove();
+            reindexStudyBlocks();
+        }
+
+        function reindexStudyBlocks() {
+            const blocks = document.querySelectorAll('.study-block');
+            blocks.forEach((block, index) => {
+                const blockNumber = index + 1;
+                const label = block.querySelector('label');
+                label.innerHTML = `<i class="fas fa-book"></i> Material ${blockNumber}:`;
+                block.querySelector('textarea').setAttribute('aria-label', `Material de estudo ${blockNumber}`);
+                block.querySelector('input[type="number"]').setAttribute('aria-label', `Número de questões para este material ${blockNumber}`);
+                block.querySelector('.remove-block').setAttribute('aria-label', `Remover Material ${blockNumber}`);
+            });
+        }
+
+
+        function setupCharacterCounters() {
+            const textareas = document.querySelectorAll('#studyMaterials textarea');
+            textareas.forEach(textarea => {
+                // Evita adicionar múltiplos listeners
+                if (textarea.dataset.listenerAttached) return;
+
+                const counter = textarea.parentNode.querySelector('.char-count');
+                const updateCount = () => {
+                    if (counter) { // Verifica se o contador existe
+                         counter.textContent = textarea.value.length;
                     }
+                };
+                
+                textarea.addEventListener('input', updateCount);
+                textarea.dataset.listenerAttached = 'true';
+                updateCount(); // Atualiza contagem inicial
+            });
+        }
+
+        // File handling
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = ''; // Limpa lista anterior
+
+            if (files.length === 0) return;
+
+            // Mostra os arquivos selecionados
+            fileList.innerHTML = files.map(file => 
+                `<div class="flex items-center space-x-2 text-sm p-1">
+                    <i class="fas fa-file"></i>
+                    <span>${file.name}</span>
+                    <span class="text-gray-500">(${formatFileSize(file.size)})</span>
+                </div>`
+            ).join('');
+            
+            // Processa os arquivos
+            files.forEach((file, index) => {
+                // Coloca o conteúdo do primeiro arquivo no primeiro textarea, os seguintes em novos blocos
+                let targetTextarea;
+                if (index === 0) {
+                    targetTextarea = document.querySelector('#studyMaterials textarea');
+                } else {
+                    addMaterialBlock();
+                    targetTextarea = document.querySelector('#studyMaterials .study-block:last-child textarea');
+                }
+                
+                if (targetTextarea) {
+                    processFile(file, targetTextarea);
+                }
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function processFile(file, textarea) {
+            const reader = new FileReader();
+            
+            reader.onloadstart = () => showLoading(true);
+            reader.onerror = () => {
+                showMessage('error', `Erro ao ler o arquivo ${file.name}.`);
+                showLoading(false);
+            };
+            
+            reader.onload = function(e) {
+                try {
+                    if (file.type === 'application/pdf') {
+                        // Usar pdf.js
+                        const loadingTask = pdfjsLib.getDocument({data: e.target.result});
+                        loadingTask.promise.then(pdf => {
+                            let text = '';
+                            let promises = [];
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                promises.push(pdf.getPage(i).then(page => page.getTextContent()));
+                            }
+                            
+                            Promise.all(promises).then(contents => {
+                                contents.forEach(content => {
+                                    content.items.forEach(item => {
+                                        text += item.str + ' ';
+                                    });
+                                    text += '\n'; // Nova página
+                                });
+                                textarea.value = text;
+                                textarea.dispatchEvent(new Event('input')); // Update char counter
+                                showLoading(false);
+                            });
+                        }).catch(err => {
+                             showMessage('error', `Erro ao processar PDF: ${err.message}`);
+                             showLoading(false);
+                        });
+                        
+                    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                        // Usar mammoth.js
+                        mammoth.extractRawText({arrayBuffer: e.target.result})
+                            .then(result => {
+                                textarea.value = result.value;
+                                textarea.dispatchEvent(new Event('input'));
+                                showLoading(false);
+                            })
+                            .catch(err => {
+                                showMessage('error', `Erro ao processar DOCX: ${err.message}`);
+                                showLoading(false);
+                            });
+
+                    } else if (file.type === 'text/plain') {
+                        textarea.value = e.target.result;
+                        textarea.dispatchEvent(new Event('input'));
+                        showLoading(false);
+                    } else {
+                         showMessage('warning', `Formato de arquivo não suportado: ${file.type}`);
+                         showLoading(false);
+                    }
+                } catch (error) {
+                    showMessage('error', `Erro inesperado ao processar arquivo: ${error.message}`);
+                    showLoading(false);
                 }
             };
-        } else if (type === 'summary') {
-            payload = {
-                contents: chatHistory
-            };
+            
+            if (file.type === 'application/pdf' || file.type.includes('word')) {
+                reader.readAsArrayBuffer(file);
+            } else if (file.type === 'text/plain') {
+                 reader.readAsText(file);
+            } else {
+                 showMessage('warning', `Arquivo ${file.name} ignorado (formato não suportado).`);
+            }
         }
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${currentApiKey}`;
 
-        try {
-            const response = await fetch(apiUrl, {
+        // Content generation
+        async function generateContent(type) {
+            if (isGenerating) {
+                showMessage('warning', 'Aguarde, geração anterior em progresso.');
+                return;
+            }
+            
+            lastGenerationType = type; // Salva o tipo para "Regenerar"
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (!apiKey) {
+                showMessage('error', 'Por favor, insira sua chave API do Google Gemini.');
+                return;
+            }
+
+            const materials = getMaterials();
+            if (materials.length === 0 || materials.every(m => m.content.length === 0)) {
+                showMessage('error', 'Por favor, adicione pelo menos um material de estudo.');
+                return;
+            }
+            
+            isGenerating = true;
+            setGenerationButtonsDisabled(true);
+            showLoading(true);
+            updateBreadcrumb('Gerando conteúdo...');
+
+            try {
+                // ########### CHAMADA REAL DA API ###########
+                const result = await callGeminiAPI(type, materials, apiKey); 
+                // #########################################
+                
+                displayResult(type, result);
+                updateStats(type);
+                saveSession(type, materials, result);
+                
+                showMessage('success', 'Conteúdo gerado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao gerar conteúdo:', error);
+                showMessage('error', `Erro ao gerar conteúdo: ${error.message}`);
+            } finally {
+                showLoading(false);
+                isGenerating = false;
+                setGenerationButtonsDisabled(false);
+                updateBreadcrumb('Resultado');
+            }
+        }
+        
+        function setGenerationButtonsDisabled(disabled) {
+            document.getElementById('generateMultiple').disabled = disabled;
+            document.getElementById('generateTrueFalse').disabled = disabled;
+            document.getElementById('generateOpen').disabled = disabled;
+            document.getElementById('generateSummary').disabled = disabled;
+        }
+
+        function getMaterials() {
+            const blocks = document.querySelectorAll('.study-block');
+            const materials = [];
+            
+            blocks.forEach(block => {
+                const textarea = block.querySelector('textarea');
+                const questionCountInput = block.querySelector('input[type="number"]');
+                
+                if (textarea.value.trim()) {
+                    materials.push({
+                        content: textarea.value.trim(),
+                        questionCount: parseInt(questionCountInput.value) || 5 
+                    });
+                }
+            });
+            
+            return materials;
+        }
+
+        // ########### FUNÇÃO REAL DA API GEMINI ###########
+        async function callGeminiAPI(type, materials, apiKey) {
+            const difficulty = document.getElementById('difficulty').value;
+            const totalQuestions = document.getElementById('totalQuestionsInput').value;
+            const aiModel = document.getElementById('aiModel').value;
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            
+            const combinedContent = materials.map(m => `--- Início Material ${materials.indexOf(m) + 1} ---\n${m.content}\n--- Fim Material ${materials.indexOf(m) + 1} ---`).join('\n\n');
+
+            let systemInstruction = "Você é um assistente educacional especialista em criar materiais de estudo. Responda em português brasileiro.";
+            let userQuery = "";
+            let responseMimeType = "text/plain";
+            
+            // Define o prompt e o tipo de resposta esperado
+            if (type === 'summary') {
+                userQuery = `Crie um resumo detalhado e bem estruturado (em formato markdown) do seguinte conteúdo, destacando os pontos principais, conceitos-chave e informações importantes.
+                
+                Conteúdo:
+                ${combinedContent}`;
+            } else {
+                // Para questões, pedimos JSON
+                responseMimeType = "application/json";
+                systemInstruction += " Responda APENAS com o objeto JSON solicitado, sem nenhum texto adicional antes ou depois.";
+                
+                if (type === 'multiple') {
+                    userQuery = `Gere ${totalQuestions} questões de múltipla escolha (nível ${difficulty}) baseadas no conteúdo abaixo.
+                    O JSON deve ter o formato: { "questions": [{ "question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": 0, "explanation": "..." }] }
+                    Onde "correct" é o índice (base 0) da opção correta.
+                    
+                    Conteúdo: ${combinedContent}`;
+                } else if (type === 'truefalse') {
+                    userQuery = `Gere ${totalQuestions} questões de Verdadeiro/Falso (nível ${difficulty}) baseadas no conteúdo abaixo.
+                    O JSON deve ter o formato: { "questions": [{ "question": "...", "correct": true, "explanation": "..." }] }
+                    Onde "correct" é um booleano (true/false).
+                    
+                    Conteúdo: ${combinedContent}`;
+                } else if (type === 'open') {
+                     userQuery = `Gere ${totalQuestions} questões abertas (discursivas) (nível ${difficulty}) baseadas no conteúdo abaixo.
+                    O JSON deve ter o formato: { "questions": [{ "question": "...", "answer": "..." }] }
+                    Onde "answer" é uma resposta modelo detalhada.
+                    
+                    Conteúdo: ${combinedContent}`;
+                }
+            }
+            
+            // Monta a URL e o Payload
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                },
+                contents: [
+                    { parts: [{ text: userQuery }] }
+                ],
+                generationConfig: {
+                    responseMimeType: responseMimeType,
+                    temperature: temperature
+                }
+            };
+            
+            // Chama a API com retentativas
+            const response = await fetchWithRetry(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Erro na API Gemini: ${response.status} - ${errorData.error?.message || 'Erro desconhecido'}`);
+                let errorMsg = `Erro na API: ${response.status} ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error?.message || errorMsg;
+                } catch (e) {}
+                throw new Error(errorMsg);
             }
 
-            const result = await response.json();
-            console.log("Resposta bruta da API Gemini:", result); 
+            const data = await response.json();
             
-            if (result.candidates && result.candidates.length > 0 &&
-                result.candidates[0].content && result.candidates[0].content.parts &&
-                result.candidates[0].content.parts.length > 0) {
+            // Processa a resposta
+            const candidate = data.candidates?.[0];
+            const text = candidate?.content?.parts?.[0]?.text;
 
-                const generatedContent = result.candidates[0].content.parts[0].text;
-                console.log("Conteúdo gerado pela API:", generatedContent); 
-
-                if (type === 'questions') {
+            if (!text) {
+                if (candidate?.finishReason === 'SAFETY') {
+                    throw new Error("A resposta foi bloqueada por motivos de segurança. Tente reformular o material.");
+                }
+                throw new Error("A API não retornou nenhum conteúdo.");
+            }
+            
+            if (type === 'summary') {
+                return text; // Retorna o texto markdown
+            } else {
+                // Para JSON, faz o parse do texto retornado
+                return parseAIJson(text);
+            }
+        }
+        
+        /**
+         * Tenta analisar uma string JSON que pode estar "suja" (ex: com ```json ... ```)
+         */
+        function parseAIJson(text) {
+             try {
+                // Tenta analisar diretamente
+                return JSON.parse(text);
+            } catch (e) {
+                // Se falhar, tenta limpar
+                console.warn("JSON direto falhou, tentando limpar...");
+                const match = text.match(/\{[\s\S]*\}/); // Encontra o primeiro { ... }
+                if (match) {
                     try {
-                        const parsedJson = JSON.parse(generatedContent);
-                        console.log("Objeto JSON Parsed:", parsedJson); 
-                        if (parsedJson && Array.isArray(parsedJson.questions)) {
-                            return parsedJson.questions; 
-                        } else {
-                            throw new Error("A resposta JSON não contém um array 'questions' válido ou está vazia.");
-                        }
-                    } catch (jsonError) {
-                        console.error("Erro ao analisar JSON da resposta da API de questões:", jsonError);
-                        showErrorMessage("A API retornou uma resposta inválida para as questões (não é JSON ou formato inesperado). Tente novamente com um texto de estudo diferente ou verifique sua chave API.");
-                        return null;
-                    }
-                } else if (type === 'summary') {
-                    return generatedContent; 
-                }
-            } else {
-                throw new Error("Resposta da API vazia ou com formato inesperado.");
-            }
-        } catch (error) {
-            console.error(`Erro ao gerar ${type}:`, error);
-            showErrorMessage(`Não foi possível gerar o(a) ${type}. Por favor, verifique sua chave API e o material. Detalhes: ${error.message}`);
-            return null;
-        } finally {
-            loadingIndicator.classList.add('hidden');
-        }
-    }
-
-    // Função para exibir as questões no DOM como um quiz
-    function displayQuizQuestions(questions) {
-        generatedQuizQuestions = questions; 
-        quizForm.innerHTML = ''; 
-        studyRecommendationsList.innerHTML = ''; 
-        submitAnswersButton.classList.add('hidden'); 
-        resultsOutputDiv.classList.add('hidden'); 
-
-        if (!questions || questions.length === 0) {
-            quizForm.innerHTML = '<p class="text-gray-500">Nenhuma questão gerada. Por favor, ajuste o texto ou tente novamente.</p>';
-        } else {
-            questions.forEach((q, index) => {
-                const questionHtml = document.createElement('div');
-                questionHtml.className = 'bg-gray-50 p-5 rounded-lg shadow-sm border border-gray-200';
-
-                let questionText = `Questão ${index + 1}) ${q.question}`;
-                
-                let optionsHtml = '';
-                if (q.type === 'MCQ' && q.options) {
-                    optionsHtml = q.options.map((option, optIndex) => {
-                        const optionLetter = String.fromCharCode(65 + optIndex); 
-                        return `
-                            <label class="block mt-2 text-gray-700">
-                                <input type="radio" name="question_${index}" value="${optionLetter}" class="mr-2">
-                                (${optionLetter}) ${option.replace(/^[A-E]\)\s*/, '')}
-                            </label>
-                        `;
-                    }).join('');
-                } else if (q.type === 'TrueFalse') {
-                    optionsHtml = `
-                        <label class="block mt-2 text-gray-700">
-                            <input type="radio" name="question_${index}" value="Verdadeiro" class="mr-2">
-                            Verdadeiro
-                        </label>
-                        <label class="block mt-2 text-gray-700">
-                            <input type="radio" name="question_${index}" value="Falso" class="mr-2">
-                            Falso
-                        </label>
-                    `;
-                } else if (q.type === 'OpenEnded') {
-                    optionsHtml = `
-                        <textarea name="question_${index}" rows="3" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 mt-2" placeholder="Sua resposta..."></textarea>
-                    `;
-                }
-
-                questionHtml.innerHTML = `
-                    <p class="text-lg font-semibold text-gray-800 mb-3">${questionText}</p>
-                    ${optionsHtml}
-                `;
-                quizForm.appendChild(questionHtml);
-            });
-            submitAnswersButton.classList.remove('hidden'); 
-        }
-        questionsOutputDiv.classList.remove('hidden');
-    }
-
-    // Função para exibir o resumo (estava faltando ou mal posicionada)
-    function displaySummary(summary) {
-        summaryTextP.innerHTML = ''; 
-        if (!summary) {
-            summaryTextP.textContent = 'Não foi possível gerar o resumo. Tente novamente.';
-        } else {
-            summaryTextP.textContent = summary;
-        }
-        summaryOutputDiv.classList.remove('hidden');
-    }
-
-    // Função para verificar respostas e exibir desempenho
-    function checkAnswersAndDisplayResults() {
-        let correctAnswers = 0;
-        const userAnswers = [];
-        quizReviewDiv.innerHTML = '';
-        studyRecommendationsList.innerHTML = '';
-
-        generatedQuizQuestions.forEach((q, index) => {
-            const userAnswerInput = quizForm.querySelector(`[name="question_${index}"]:checked`) || quizForm.querySelector(`[name="question_${index}"]`);
-            let userAnswer = '';
-            if (userAnswerInput) {
-                userAnswer = userAnswerInput.value.trim();
-            }
-
-            userAnswers.push({ questionIndex: index, answer: userAnswer });
-
-            const reviewCard = document.createElement('div');
-            reviewCard.className = 'bg-gray-50 p-5 rounded-lg shadow-sm border border-gray-200';
-            
-            let isCorrect = false;
-            const cleanCorrectAnswer = q.answer.toString().replace(/^[A-E]\)\s*/, '').toLowerCase();
-
-            if (q.type === 'MCQ' || q.type === 'TrueFalse') {
-                isCorrect = (userAnswer.toLowerCase() === cleanCorrectAnswer);
-            } else if (q.type === 'OpenEnded') {
-                isCorrect = userAnswer.length > 0; 
-            }
-
-            if (isCorrect) {
-                correctAnswers++;
-                reviewCard.classList.add('border-green-400');
-            } else {
-                reviewCard.classList.add('border-red-400');
-                if (q.topic) {
-                    const existingTopic = Array.from(studyRecommendationsList.children).find(li => li.textContent.includes(q.topic));
-                    if (!existingTopic) {
-                        const li = document.createElement('li');
-                        li.textContent = q.topic;
-                        studyRecommendationsList.appendChild(li);
+                        return JSON.parse(match[0]);
+                    } catch (e2) {
+                        console.error("Falha ao analisar JSON limpo:", e2);
+                        throw new Error("A IA retornou um JSON em formato inválido.");
                     }
                 }
+                throw new Error("A IA não retornou um JSON válido.");
             }
-
-            let reviewDetails = `<p class="text-lg font-semibold text-gray-800 mb-3">Questão ${index + 1}) ${q.question}</p>`;
-            if (q.type === 'MCQ' && q.options) {
-                reviewDetails += '<ul class="list-disc pl-5 space-y-2">';
-                q.options.forEach((option, optIndex) => {
-                    const optionLetter = String.fromCharCode(65 + optIndex);
-                    const isChosen = (userAnswer === optionLetter);
-                    const isCorrectOption = (optionLetter.toLowerCase() === cleanCorrectAnswer); 
-                    
-                    reviewDetails += `<li class="text-gray-700 ${isChosen ? (isCorrect ? 'font-bold text-green-700' : 'font-bold text-red-700') : ''}">
-                                            (${optionLetter}) ${option.replace(/^[A-E]\)\s*/, '')} 
-                                            ${isCorrectOption ? '<span class="text-green-600 font-bold">(Correta)</span>' : ''}
-                                          </li>`;
-                });
-                reviewDetails += '</ul>';
-            } else if (q.type === 'TrueFalse') {
-                reviewDetails += `<p class="mt-2 text-gray-700">Sua resposta: <span class="${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold">${userAnswer || 'Não respondido'}</span></p>`;
-            } else if (q.type === 'OpenEnded') {
-                 reviewDetails += `<p class="mt-2 text-gray-700">Sua resposta: <span class="${isCorrect ? 'text-green-700' : 'text-red-700'} font-bold">${userAnswer || 'Não respondido'}</span></p>`;
-            }
-            
-            reviewDetails += `<p class="mt-3 text-sm text-gray-600">**Resposta Correta:** ${q.answer}</p>`;
-            if (q.explanation) {
-                reviewDetails += `<p class="mt-1 text-sm text-gray-600">**Explicação:** ${q.explanation}</p>`;
-            }
-            if (q.topic) {
-                 reviewDetails += `<p class="mt-1 text-sm text-gray-500 italic">Tópico: ${q.topic}</p>`;
-            }
-            
-            reviewCard.innerHTML = reviewDetails;
-            quizReviewDiv.appendChild(reviewCard);
-        });
-
-        scoreP.textContent = `Você acertou ${correctAnswers} de ${generatedQuizQuestions.length} questões!`;
-        resultsOutputDiv.classList.remove('hidden');
-    }
-
-
-    // **********************************************
-    // INÍCIO DO SCRIPT EXECUTADO APÓS O DOM ESTAR PRONTO
-    // **********************************************
-    window.onload = function() {
-        // Atribuição de variáveis DOM (todos os elementos HTML são encontrados aqui)
-        apiKeyInput = document.getElementById('apiKey');
-        numQuestionsInput = document.getElementById('numQuestions');
-        studyMaterialsContainer = document.getElementById('studyMaterialsContainer');
-        addStudyMaterialBlockButton = document.getElementById('addStudyMaterialBlock');
-        fileUploadInput = document.getElementById('fileUpload'); 
-
-        generateMCQButton = document.getElementById('generateMCQ');
-        generateTrueFalseButton = document.getElementById('generateTrueFalse');
-        generateOpenEndedButton = document.getElementById('generateOpenEnded');
-        generateSummaryButton = document.getElementById('generateSummary');
-
-        questionsOutputDiv = document.getElementById('questionsOutput');
-        quizForm = document.getElementById('quizForm');
-        submitAnswersButton = document.getElementById('submitAnswers');
-        resultsOutputDiv = document.getElementById('resultsOutput');
-        scoreP = document.getElementById('score');
-        quizReviewDiv = document.getElementById('quizReview');
-        studyRecommendationsList = document.getElementById('studyRecommendations');
-        summaryOutputDiv = document.getElementById('summaryOutput'); 
-        summaryTextP = document.getElementById('summaryText'); 
-
-        loadingIndicator = document.getElementById('loadingIndicator');
-        errorMessageDiv = document.getElementById('errorMessage');
-        errorMessageText = document.getElementById('errorMessageText');
-
-        // Adiciona o event listener para o botão "Adicionar Outro Assunto"
-        addStudyMaterialBlockButton.addEventListener('click', addMaterialBlock);
-        
-        // Listener para o botão "Remover" do bloco inicial (ID studyMaterial_0)
-        const initialRemoveButton = document.querySelector('#studyMaterialsContainer .study-material-block:first-child .remove-material-block');
-        if (initialRemoveButton) {
-            initialRemoveButton.addEventListener('click', (e) => {
-                e.target.closest('.study-material-block').remove();
-                reindexStudyBlocks(); // Reindexa após a remoção do bloco inicial
-            });
         }
         
-        submitAnswersButton.addEventListener('click', checkAnswersAndDisplayResults);
-
-        // --- CÓDIGO PARA UPLOAD DE ARQUIVOS (AGORA COM PDF/DOCX) ---
-        // Certifique-se que o pdf.js e mammoth.js estão carregados no <head>
-        fileUploadInput.addEventListener('change', async (event) => { // Tornar async para usar await com promessas de bibliotecas
-            const file = event.target.files[0];
-
-            if (!file) {
-                return; // No file selected
-            }
-
-            loadingIndicator.classList.remove('hidden');
-            hideMessages(); // Oculta todas as mensagens antes de processar
-            hideAllOutputs();
-            
-            let targetTextArea = document.getElementById('studyMaterial_0');
-            // Verifica se o primeiro campo está vazio. Se estiver, preenche ele.
-            // Se não, cria um novo bloco e preenche ele.
-            if (!targetTextArea || targetTextArea.value.trim() !== '') {
-                targetTextArea = addMaterialBlock(); 
-            }
-            
-            targetTextArea.value = ''; // Limpa a textarea antes de carregar (importante se ela já tinha conteúdo ou se é nova)
-            
+        /**
+         * Wrapper de Fetch com retentativas (exponential backoff)
+         */
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
             try {
-                let fileContent = '';
-                let successMessage = '';
-
-                if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-                    fileContent = await readFileAsText(file);
-                    successMessage = "Conteúdo do arquivo TXT carregado com sucesso.";
-                } else if (file.type === 'application/pdf') {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-                    fileContent = await extractTextFromPdf(file);
-                    successMessage = "Conteúdo do arquivo PDF carregado com sucesso.";
-                } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
-                    fileContent = await extractTextFromDocx(file);
-                    successMessage = "Conteúdo do arquivo DOCX carregado com sucesso.";
-                } else {
-                    showErrorMessage("Formato de arquivo não suportado. Por favor, use .txt, .pdf ou .docx.");
-                    // Se o formato não for suportado e um novo bloco foi criado, remova-o
-                    if (targetTextArea !== document.getElementById('studyMaterial_0')) { // Se não foi o primeiro bloco
-                        targetTextArea.closest('.study-material-block').remove();
-                        reindexStudyBlocks(); // Reindexa após remoção do bloco inválido
-                    }
-                    return; // Sai da função se o formato não for suportado
+                const response = await fetch(url, options);
+                if (response.status === 429 && retries > 0) { // Too Many Requests
+                    console.warn(`API rate limit. Retentando em ${delay}ms... (${retries} retentativas restantes)`);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
                 }
-                
-                targetTextArea.value = fileContent; // Coloca o conteúdo na textarea
-                showMessage(successMessage + " Agora você pode gerar questões/resumos!"); // Mostra mensagem de sucesso
-
+                return response;
             } catch (error) {
-                console.error("Erro ao processar o arquivo:", error);
-                showErrorMessage(`Erro ao processar o arquivo: ${error.message}.`);
-                // Remove o bloco adicionado se houver erro no processamento
-                if (targetTextArea !== document.getElementById('studyMaterial_0')) { // Se não foi o primeiro bloco
-                    targetTextArea.closest('.study-material-block').remove();
-                    reindexStudyBlocks(); // Reindexa após remoção do bloco inválido
-                } else { // Se foi o primeiro bloco, apenas limpa o conteúdo
-                    targetTextArea.value = '';
+                if (retries > 0) {
+                    console.warn(`Fetch falhou. Retentando em ${delay}ms...`, error.message);
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
                 }
-            } finally {
-                loadingIndicator.classList.add('hidden');
-                fileUploadInput.value = ''; // Limpar o input de arquivo
+                throw error; // Lança o erro após esgotar retentativas
             }
-        });
-
-        // Helper function para ler arquivos de texto
-        function readFileAsText(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(new Error("Falha ao ler arquivo de texto."));
-                reader.readAsText(file);
-            });
         }
+        // ###################################################
 
-        // Helper function para extrair texto de PDF
-        async function extractTextFromPdf(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let text = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                text += content.items.map(item => item.str).join(' ') + '\n';
-            }
-            return text;
-        }
+        function displayResult(type, result) {
+            const outputSection = document.getElementById('outputSection');
+            const quizSection = document.getElementById('quizSection');
+            const summarySection = document.getElementById('summarySection');
+            
+            // Limpa resultados anteriores
+            document.getElementById('questionsContainer').innerHTML = '';
+            document.getElementById('summaryContent').innerHTML = '';
+            document.getElementById('quizResults').classList.add('hidden');
 
-        // Helper function para extrair texto de DOCX
-        async function extractTextFromDocx(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-            return result.value; // O texto extraído
-        }
-        // --- FIM DO CÓDIGO DE UPLOAD ---
-
-
-        generateMCQButton.addEventListener('click', async () => {
-            const numTotalQuestions = parseInt(numQuestionsInput.value);
-            if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
-                showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
-                return;
-            }
-
-            const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
-            let totalRequestedQuestions = 0;
-            const materialPrompts = [];
-
-            studyBlocks.forEach((block) => {
-                const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
-                const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
-
-                if (materialText && !isNaN(numRequested) && numRequested > 0) {
-                    totalRequestedQuestions += numRequested;
-                    materialPrompts.push({
-                        material: materialText,
-                        numQuestions: numRequested
-                    });
-                }
-            });
-
-            if (materialPrompts.length === 0) {
-                showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
-                return;
-            }
-
-            if (totalRequestedQuestions !== numTotalQuestions) {
-                showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
-                return;
-            }
-
-            let allGeneratedQuestions = [];
-            for (const { material, numQuestions } of materialPrompts) {
-                const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} questões de múltipla escolha. Para cada questão, forneça a pergunta, 4 opções de resposta (SEM A LETRA DA ALTERNATIVA NO TEXTO DA OPÇÃO, apenas o conteúdo da alternativa), e a letra da resposta correta (A, B, C ou D). Inclua uma breve explicação para a resposta correta e o 'topic' exato do material. O 'type' da questão deve ser 'MCQ'. Responda em formato JSON seguindo o schema fornecido.
-                Material:
-                "${material}"`;
+            outputSection.classList.remove('hidden');
+            outputSection.classList.add('fade-in');
+            
+            if (type === 'summary') {
+                quizSection.classList.add('hidden');
+                summarySection.classList.remove('hidden');
                 
-                const questions = await callGeminiAPI(prompt, 'questions');
-                if (questions) {
-                    allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'MCQ'));
+                const summaryContent = document.getElementById('summaryContent');
+                // Converte o Markdown retornado em HTML
+                summaryContent.innerHTML = markdownToHtml(result); 
+            } else {
+                // Validação do resultado das questões
+                if (!result || !result.questions || !Array.isArray(result.questions) || result.questions.length === 0) {
+                    showMessage('error', 'A IA não retornou questões no formato esperado. Verifique o console para detalhes.');
+                    console.error("Resultado inesperado da IA:", result);
+                    return;
                 }
+                
+                summarySection.classList.add('hidden');
+                quizSection.classList.remove('hidden');
+                
+                displayQuiz(type, result.questions);
+                
+                const timerWidget = document.getElementById('timerWidget');
+                timerWidget.classList.remove('hidden');
             }
             
-            displayQuizQuestions(allGeneratedQuestions);
-        });
+            outputSection.scrollIntoView({ behavior: 'smooth' });
+        }
 
-        generateTrueFalseButton.addEventListener('click', async () => {
-            const numTotalQuestions = parseInt(numQuestionsInput.value);
-            if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
-                showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
-                return;
-            }
+        function displayQuiz(type, questions) {
+            const container = document.getElementById('questionsContainer');
+            const totalQuestionsEl = document.getElementById('totalQuizQuestions');
+            const currentQuestionEl = document.getElementById('currentQuestion');
+            
+            totalQuestionsEl.textContent = questions.length;
+            currentQuestionEl.textContent = '1'; // Reseta para a primeira questão
+            
+            container.innerHTML = questions.map((q, index) => {
+                // Armazena a resposta correta no elemento
+                let correctData = `data-correct="${q.correct}"`;
 
-            const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
-            let totalRequestedQuestions = 0;
-            const materialPrompts = [];
+                if (type === 'multiple') {
+                    // Validação simples
+                    if (!q.options || q.options.length === 0) {
+                         console.warn(`Questão ${index+1} (Múltipla) está sem opções.`);
+                         return `<div class="p-4 border rounded-lg mb-4" style="background-color: #fef2f2; border-color: var(--error-color); color: var(--error-color);">Questão ${index+1} inválida (sem opções).</div>`;
+                    }
+                    return `
+                        <div class="question-block mb-6 p-4 border rounded-lg" style="border-color: var(--border-color);" data-question-index="${index}" ${correctData}>
+                            <h4 class="font-semibold mb-3">${index + 1}. ${q.question}</h4>
+                            <div class="space-y-2">
+                                ${q.options.map((option, optIndex) => `
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                        <input type="radio" name="q${index}" value="${optIndex}" class="text-blue-600">
+                                        <span>${option}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                            <div class="explanation hidden mt-3 p-3 rounded-lg" style="background-color: #eff6ff; color: #1e40af;">
+                                <strong>Explicação:</strong> ${q.explanation || 'N/A'}
+                            </div>
+                        </div>
+                    `;
+                } else if (type === 'truefalse') {
+                    return `
+                        <div class="question-block mb-6 p-4 border rounded-lg" style="border-color: var(--border-color);" data-question-index="${index}" ${correctData}>
+                            <h4 class="font-semibold mb-3">${index + 1}. ${q.question}</h4>
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input type="radio" name="q${index}" value="true" class="text-blue-600">
+                                    <span>Verdadeiro</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input type="radio" name="q${index}" value="false" class="text-blue-600">
+                                    <span>Falso</span>
+                                </label>
+                            </div>
+                            <div class="explanation hidden mt-3 p-3 rounded-lg" style="background-color: #eff6ff; color: #1e40af;">
+                                <strong>Explicação:</strong> ${q.explanation || 'N/A'}
+                            </div>
+                        </div>
+                    `;
+                } else if (type === 'open') {
+                    return `
+                        <div class="question-block mb-6 p-4 border rounded-lg" style="border-color: var(--border-color);" data-question-index="${index}">
+                            <h4 class="font-semibold mb-3">${index + 1}. ${q.question}</h4>
+                            <textarea class="input-field h-24 resize-none" placeholder="Digite sua resposta aqui..."></textarea>
+                            <div class="model-answer hidden mt-3 p-3 rounded-lg" style="background-color: #f0fdf4; color: #15803d;">
+                                <strong>Resposta Modelo:</strong> ${q.answer || 'N/A'}
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
 
-            studyBlocks.forEach((block) => {
-                const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
-                const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
+        function checkQuizAnswers() {
+            const questions = document.querySelectorAll('.question-block');
+            let correct = 0;
+            let total = 0;
+            const showExplanations = document.getElementById('showExplanations').checked;
 
-                if (materialText && !isNaN(numRequested) && numRequested > 0) {
-                    totalRequestedQuestions += numRequested;
-                    materialPrompts.push({
-                        material: materialText,
-                        numQuestions: numRequested
-                    });
+            questions.forEach((questionEl) => {
+                const explanation = questionEl.querySelector('.explanation');
+                const modelAnswer = questionEl.querySelector('.model-answer');
+                
+                // Reseta estilos
+                questionEl.style.backgroundColor = 'transparent';
+                questionEl.style.borderColor = 'var(--border-color)';
+
+
+                if (explanation) { // Múltipla escolha ou V/F
+                    total++;
+                    if (showExplanations) explanation.classList.remove('hidden');
+                    
+                    const correctAnswer = questionEl.dataset.correct;
+                    const selectedInput = questionEl.querySelector('input[type="radio"]:checked');
+                    
+                    if (selectedInput) {
+                        // Compara a resposta selecionada (string) com a correta (pode ser string 'true'/'false' ou índice numérico)
+                        if (selectedInput.value == correctAnswer) {
+                            correct++;
+                            questionEl.style.backgroundColor = '#f0fdf4';
+                            questionEl.style.borderColor = 'var(--success-color)';
+                        } else {
+                            questionEl.style.backgroundColor = '#fef2f2';
+                            questionEl.style.borderColor = 'var(--error-color)';
+                        }
+                    }
+                } else if (modelAnswer) { // Questão aberta
+                    // Apenas mostra a resposta modelo, não há pontuação automática
+                    modelAnswer.classList.remove('hidden');
                 }
             });
+            
+            if (total > 0) {
+                // Update results
+                document.getElementById('correctCount').textContent = correct;
+                document.getElementById('incorrectCount').textContent = total - correct;
+                document.getElementById('scorePercent').textContent = Math.round((correct / total) * 100) + '%';
+                
+                document.getElementById('quizResults').classList.remove('hidden');
+                
+                studyStats.correctAnswers += correct;
+                studyStats.incorrectAnswers += (total - correct);
+                updateStatsDisplay();
+                saveStats();
+            } else {
+                 document.getElementById('quizResults').classList.add('hidden');
+                 if (document.querySelectorAll('.model-answer').length > 0) {
+                     showMessage('success', 'Respostas modelo exibidas.');
+                 }
+            }
+        }
 
-            if (materialPrompts.length === 0) {
-                showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
+
+        // Timer functions
+        function startTimer() {
+            if (!isTimerRunning) {
+                isTimerRunning = true;
+                timerInterval = setInterval(() => {
+                    timerSeconds++;
+                    updateTimerDisplay();
+                }, 1000);
+                
+                document.getElementById('startTimer').classList.add('hidden');
+                document.getElementById('pauseTimer').classList.remove('hidden');
+            }
+        }
+
+        function pauseTimer() {
+            if (isTimerRunning) {
+                isTimerRunning = false;
+                clearInterval(timerInterval);
+                
+                document.getElementById('startTimer').classList.remove('hidden');
+                document.getElementById('pauseTimer').classList.add('hidden');
+            }
+        }
+
+        function resetTimer() {
+            if (isTimerRunning) {
+                pauseTimer();
+            }
+            studyStats.totalStudyTime += Math.round(timerSeconds / 60); // Salva o tempo no reset
+            timerSeconds = 0;
+            updateTimerDisplay();
+            updateStatsDisplay(); // Atualiza o total
+            saveStats();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timerSeconds / 60);
+            const seconds = timerSeconds % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Utility functions
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function showMessage(type, message) {
+            const messageEl = document.getElementById(type + 'Message');
+            const textEl = document.getElementById(type + 'Text');
+            
+            textEl.textContent = message;
+            messageEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                hideMessage(type);
+            }, 5000);
+        }
+
+        function hideMessage(type) {
+            const messageEl = document.getElementById(type + 'Message');
+            messageEl.classList.add('hidden');
+        }
+
+        function updateBreadcrumb(step) {
+            document.getElementById('currentStep').textContent = step;
+        }
+
+        function updateStats(type) {
+            if (type === 'summary') {
+                studyStats.totalSummaries++;
+            } else {
+                // Contamos como 1 sessão de questões, não o número de questões
+                studyStats.totalQuestions++; 
+            }
+            // O tempo de estudo é salvo no reset/pause do timer
+            
+            updateStatsDisplay();
+            saveStats();
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('totalQuestionsStat').textContent = studyStats.totalQuestions;
+            document.getElementById('totalSummariesStat').textContent = studyStats.totalSummaries;
+            document.getElementById('studyTimeStat').textContent = studyStats.totalStudyTime + 'm';
+        }
+
+        function saveStats() {
+            localStorage.setItem('studyStats', JSON.stringify(studyStats));
+        }
+
+        function saveSession(type, materials, result) {
+            const session = {
+                id: Date.now(),
+                type: type,
+                timestamp: new Date().toISOString(),
+                materialsCount: materials.length,
+                materialsContent: materials.map(m => m.content.substring(0, 100) + '...'), // Salva trechos
+                result: result // O resultado (questões ou resumo)
+            };
+            
+            studyStats.sessions.unshift(session);
+            if (studyStats.sessions.length > 10) {
+                studyStats.sessions = studyStats.sessions.slice(0, 10);
+            }
+            
+            saveStats();
+            updateRecentSessions();
+        }
+        
+        function loadSession(sessionId) {
+            const session = studyStats.sessions.find(s => s.id == sessionId);
+            if (!session) {
+                showMessage('error', 'Sessão não encontrada.');
+                return;
+            }
+            
+            // Recarregar materiais (simplificado, apenas o primeiro)
+            const materialBlocks = document.querySelectorAll('.study-block');
+            // Remove todos, exceto o primeiro
+            materialBlocks.forEach((block, index) => {
+                if (index > 0) block.remove();
+            });
+            // Adiciona blocos se necessário (simplificado)
+            const firstTextarea = document.querySelector('.study-block textarea');
+            firstTextarea.value = session.materialsContent[0]; // Recarrega o trecho
+            firstTextarea.dispatchEvent(new Event('input'));
+            
+            // Exibir resultado
+            displayResult(session.type, session.result);
+            showMessage('success', `Sessão de ${new Date(session.timestamp).toLocaleString()} carregada.`);
+        }
+
+        function updateRecentSessions() {
+            const container = document.getElementById('recentSessions');
+            
+            if (studyStats.sessions.length === 0) {
+                container.innerHTML = `<p class="text-sm text-center py-4" style="color: var(--text-secondary);">Nenhuma sessão ainda</p>`;
+                return;
+            }
+            
+            container.innerHTML = studyStats.sessions.slice(0, 5).map(session => `
+                <div class="p-2 rounded text-sm cursor-pointer hover:bg-gray-200" style="background-color: #f8f9fa;" onclick="loadSession(${session.id})">
+                    <div class="font-medium">${getSessionTypeLabel(session.type)}</div>
+                    <div class="text-xs" style="color: var(--text-secondary);">${new Date(session.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        function getSessionTypeLabel(type) {
+            const labels = {
+                'multiple': 'Múltipla Escolha',
+                'truefalse': 'Verdadeiro/Falso',
+                'open': 'Questões Abertas',
+                'summary': 'Resumo'
+            };
+            return labels[type] || type;
+        }
+
+        // Modal functions
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = 'block';
+            
+            if (modalId === 'statsModal') {
+                populateStats();
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.style.display = 'none';
+        }
+
+        function populateStats() {
+            const statsContent = document.getElementById('statsContent');
+            const accuracy = studyStats.correctAnswers + studyStats.incorrectAnswers > 0 
+                ? Math.round((studyStats.correctAnswers / (studyStats.correctAnswers + studyStats.incorrectAnswers)) * 100)
+                : 0;
+                
+            statsContent.innerHTML = `
+                <div class="stats-grid mb-6">
+                    <div class="stat-card">
+                        <i class="fas fa-question-circle text-2xl mb-2"></i>
+                        <div class="text-2xl font-bold">${studyStats.totalQuestions}</div>
+                        <div class="text-sm opacity-90">Sessões de Questões</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-file-alt text-2xl mb-2"></i>
+                        <div class="text-2xl font-bold">${studyStats.totalSummaries}</div>
+                        <div class="text-sm opacity-90">Resumos Criados</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock text-2xl mb-2"></i>
+                        <div class="text-2xl font-bold">${studyStats.totalStudyTime}m</div>
+                        <div class="text-sm opacity-90">Tempo de Estudo</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-chart-line text-2xl mb-2"></i>
+                        <div class="text-2xl font-bold">${accuracy}%</div>
+                        <div class="text-sm opacity-90">Precisão (Quiz)</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="text-lg font-semibold mb-4">Histórico de Sessões</h3>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${studyStats.sessions.map(session => `
+                            <div class="flex items-center justify-between p-3 rounded" style="background-color: var(--bg-secondary);">
+                                <div>
+                                    <div class="font-medium">${getSessionTypeLabel(session.type)}</div>
+                                    <div class="text-sm" style="color: var(--text-secondary);">${new Date(session.timestamp).toLocaleString()}</div>
+                                </div>
+                                <div class="text-sm" style="color: var(--text-secondary);">
+                                    ${session.materialsCount} material(is)
+                                </div>
+                            </div>
+                        `).join('') || `<p class="text-center py-4" style="color: var(--text-secondary);">Nenhuma sessão registrada</p>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Settings functions
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('settings')) || {};
+            
+            document.getElementById('autoSave').checked = settings.autoSave || false;
+            document.getElementById('soundEffects').checked = settings.soundEffects || false;
+            document.getElementById('animations').checked = settings.animations !== undefined ? settings.animations : true;
+            document.getElementById('showExplanations').checked = settings.showExplanations !== undefined ? settings.showExplanations : true;
+            document.getElementById('defaultTime').value = settings.defaultTime || '15';
+            document.getElementById('temperature').value = settings.temperature || '0.7';
+            document.getElementById('tempValue').textContent = settings.temperature || '0.7';
+            document.getElementById('aiModel').value = settings.aiModel || 'gemini-2.5-flash-preview-09-2025';
+        }
+
+        function saveSettings() {
+            const settings = {
+                autoSave: document.getElementById('autoSave').checked,
+                soundEffects: document.getElementById('soundEffects').checked,
+                animations: document.getElementById('animations').checked,
+                showExplanations: document.getElementById('showExplanations').checked,
+                defaultTime: document.getElementById('defaultTime').value,
+                temperature: document.getElementById('temperature').value,
+                aiModel: document.getElementById('aiModel').value
+            };
+            
+            localStorage.setItem('settings', JSON.stringify(settings));
+            showMessage('success', 'Configurações salvas com sucesso!');
+            closeModal('settingsModal');
+        }
+
+        // Export functions
+        function showExportOptions() {
+            const outputSection = document.getElementById('outputSection');
+            if (outputSection.classList.contains('hidden')) {
+                 showMessage('error', 'Nenhum resultado para exportar. Gere um conteúdo primeiro.');
+                 return;
+            }
+            // Apenas rola para as opções
+            outputSection.scrollIntoView({ behavior: 'smooth' });
+             showMessage('success', 'Opções de exportação estão abaixo do resultado.');
+        }
+
+        function exportToPDF() {
+            if (typeof jspdf === 'undefined') {
+                showMessage('error', 'Biblioteca PDF (jsPDF) não carregada.');
+                return;
+            }
+            
+            const { jsPDF } = jspdf;
+            const doc = new jsPDF();
+            const outputSection = document.getElementById('outputSection');
+
+            if (outputSection.classList.contains('hidden')) {
+                showMessage('error', 'Nenhum resultado para exportar.');
                 return;
             }
 
-            if (totalRequestedQuestions !== numTotalQuestions) {
-                showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
-                return;
+            let contentText = '';
+            
+            // Verifica se é resumo
+            const summaryContent = document.getElementById('summaryContent');
+            if (!document.getElementById('summarySection').classList.contains('hidden')) {
+                contentText = summaryContent.innerText; // Pega o texto simples do resumo
+            
+            } else if (!document.getElementById('quizSection').classList.contains('hidden')) {
+                 // Pega o texto das questões
+                 const questions = document.querySelectorAll('.question-block');
+                 questions.forEach((q, index) => {
+                     const questionText = q.querySelector('h4').innerText;
+                     contentText += `${questionText}\n`;
+                     
+                     // Opções
+                     q.querySelectorAll('label').forEach(label => {
+                         contentText += `- ${label.innerText}\n`;
+                     });
+                     
+                     // Resposta (se visível)
+                     const explanation = q.querySelector('.explanation:not(.hidden)');
+                     if (explanation) contentText += `${explanation.innerText}\n`;
+                     
+                     const modelAnswer = q.querySelector('.model-answer:not(.hidden)');
+                     if (modelAnswer) contentText += `${modelAnswer.innerText}\n`;
+                     
+                     contentText += '\n';
+                 });
+            }
+            
+            if (!contentText) {
+                 showMessage('error', 'Não foi possível extrair o conteúdo para o PDF.');
+                 return;
             }
 
-            let allGeneratedQuestions = [];
-            for (const { material, numQuestions } of materialPrompts) {
-                const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} afirmações de Verdadeiro/Falso. Para cada afirmação, forneça a afirmação e a resposta (Verdadeiro ou Falso). Inclua uma breve explicação. O 'type' da questão deve ser 'TrueFalse'. Adicione o 'topic' exato do material. Responda em formato JSON seguindo o schema fornecido.
-                Material:
-                "${material}"`;
+            // Adiciona o texto ao PDF
+            doc.text('Estudo.AI - Resultados Exportados', 10, 10);
+            // Divide o texto em linhas que cabem na página
+            const splitText = doc.splitTextToSize(contentText, 180); 
+            doc.text(splitText, 10, 20);
+            
+            doc.save('estudo-ai-resultados.pdf');
+            showMessage('success', 'PDF exportado com sucesso!');
+        }
 
-                const questions = await callGeminiAPI(prompt, 'questions');
-                if (questions) {
-                    allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'TrueFalse'));
+        function exportToJSON() {
+            const lastSession = studyStats.sessions[0];
+            if (!lastSession) {
+                showMessage('error', 'Nenhum resultado recente para exportar.');
+                return;
+            }
+            
+            const data = {
+                timestamp: lastSession.timestamp,
+                type: lastSession.type,
+                result: lastSession.result
+            };
+            
+            downloadFile(JSON.stringify(data, null, 2), 'application/json', 'estudo-ai-resultados.json');
+            showMessage('success', 'JSON exportado com sucesso!');
+        }
+
+        function exportToTXT() {
+             const outputSection = document.getElementById('outputSection');
+             let contentText = `Estudo.AI - Resultados\nData: ${new Date().toLocaleString()}\n\n`;
+
+            if (outputSection.classList.contains('hidden')) {
+                showMessage('error', 'Nenhum resultado para exportar.');
+                return;
+            }
+            
+            // Verifica se é resumo
+            const summaryContent = document.getElementById('summaryContent');
+            if (!document.getElementById('summarySection').classList.contains('hidden')) {
+                contentText += summaryContent.innerText;
+            
+            } else if (!document.getElementById('quizSection').classList.contains('hidden')) {
+                 const questions = document.querySelectorAll('.question-block');
+                 questions.forEach((q) => {
+                     contentText += `${q.querySelector('h4').innerText}\n`;
+                     q.querySelectorAll('label').forEach(label => {
+                         contentText += `- ${label.innerText}\n`;
+                     });
+                     const explanation = q.querySelector('.explanation');
+                     if (explanation) contentText += `\n${explanation.innerText}\n`;
+                     const modelAnswer = q.querySelector('.model-answer');
+                     if (modelAnswer) contentText += `\n${modelAnswer.innerText}\n`;
+                     contentText += '\n---\n\n';
+                 });
+            }
+            
+            downloadFile(contentText, 'text/plain', 'estudo-ai-resultados.txt');
+            showMessage('success', 'Arquivo de texto exportado com sucesso!');
+        }
+        
+        function downloadFile(content, mimeType, filename) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function printContent() {
+            window.print();
+        }
+
+        // Keyboard shortcuts
+        function handleKeyboardShortcuts(event) {
+            if (event.ctrlKey) {
+                switch (event.key.toLowerCase()) {
+                    case 'm':
+                        event.preventDefault();
+                        document.getElementById('generateMultiple').click();
+                        break;
+                    case 't':
+                        event.preventDefault();
+                        document.getElementById('generateTrueFalse').click();
+                        break;
+                    case 's':
+                        event.preventDefault();
+                        document.getElementById('generateSummary').click();
+                        break;
+                    case 'd': // Removido
+                        event.preventDefault();
+                        // toggleTheme();
+                        break;
+                    case '/':
+                    case '?':
+                        event.preventDefault();
+                        showMessage('success', 'Atalhos: Ctrl+M (Múltipla), Ctrl+T (V/F), Ctrl+S (Resumo)');
+                        break;
                 }
             }
-            displayQuizQuestions(allGeneratedQuestions);
-        });
+        }
 
-        generateOpenEndedButton.addEventListener('click', async () => {
-            const numTotalQuestions = parseInt(numQuestionsInput.value);
-            if (isNaN(numTotalQuestions) || numTotalQuestions <= 0) {
-                showErrorMessage("Por favor, insira um número válido de questões (maior que zero).");
-                return;
+        // Search functionality
+        function toggleSearch() {
+            const searchBar = document.getElementById('searchBar');
+            searchBar.classList.toggle('hidden');
+            
+            if (!searchBar.classList.contains('hidden')) {
+                document.getElementById('searchInput').focus();
             }
+        }
 
-            const studyBlocks = Array.from(document.querySelectorAll('.study-material-block'));
-            let totalRequestedQuestions = 0;
-            const materialPrompts = [];
-
-            studyBlocks.forEach((block) => {
-                const materialText = block.querySelector(`textarea[id^="studyMaterial_"]`).value.trim();
-                const numRequested = parseInt(block.querySelector(`input[id^="numQuestions_"]`).value);
-
-                if (materialText && !isNaN(numRequested) && numRequested > 0) {
-                    totalRequestedQuestions += numRequested;
-                    materialPrompts.push({
-                        material: materialText,
-                        numQuestions: numRequested
-                    });
+        function searchContent() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const questions = document.querySelectorAll('.question-block');
+            
+            questions.forEach(question => {
+                const text = question.textContent.toLowerCase();
+                if (query && !text.includes(query)) {
+                    question.style.display = 'none';
+                } else {
+                    question.style.display = 'block';
                 }
             });
+        }
 
-            if (materialPrompts.length === 0) {
-                showErrorMessage("Por favor, cole pelo menos um material de estudo e especifique quantas questões deseja para ele.");
-                return;
+        // Scroll functions
+        function handleScroll() {
+            const scrollButton = document.getElementById('scrollTop');
+            if (window.pageYOffset > 300) {
+                scrollButton.classList.remove('hidden');
+            } else {
+                scrollButton.classList.add('hidden');
             }
+        }
 
-            if (totalRequestedQuestions !== numTotalQuestions) {
-                showErrorMessage(`O número total de questões solicitadas por assunto (${totalRequestedQuestions}) não corresponde ao número total de questões (${numTotalQuestions}). Por favor, ajuste.`);
-                return;
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Utility functions
+        function clearAll() {
+            if (confirm('Tem certeza que deseja limpar todos os materiais de estudo e resultados?')) {
+                // Limpa textareas
+                const textareas = document.querySelectorAll('#studyMaterials textarea');
+                textareas.forEach((textarea, index) => {
+                    if (index === 0) {
+                        textarea.value = ''; // Limpa o primeiro
+                        textarea.dispatchEvent(new Event('input'));
+                    } else {
+                        textarea.closest('.study-block').remove(); // Remove os demais
+                    }
+                });
+                reindexStudyBlocks();
+                
+                // Limpa lista de arquivos
+                document.getElementById('fileList').innerHTML = '';
+                
+                // Esconde resultados
+                document.getElementById('outputSection').classList.add('hidden');
+                document.getElementById('timerWidget').classList.add('hidden');
+                
+                resetTimer();
+                
+                showMessage('success', 'Dados limpos com sucesso!');
+                updateBreadcrumb('Início');
             }
+        }
 
-            let allGeneratedQuestions = [];
-            for (const { material, numQuestions } of materialPrompts) {
-                const prompt = `Com base no seguinte material de estudo sobre o tópico **${material.substring(0, Math.min(material.length, 50)).split('\n')[0].trim()}...**, gere ${numQuestions} questões abertas. Para cada questão, forneça a pergunta. Inclua uma breve explicação do conceito relacionado à pergunta para ajudar na resposta. O 'type' da questão deve ser 'OpenEnded'. Adicione o 'topic' exato do material. Responda em formato JSON seguindo o schema fornecido.
-                Material:
-                "${material}"`;
+        function regenerateContent() {
+            if (lastGenerationType) {
+                 showMessage('success', `Regerando ${getSessionTypeLabel(lastGenerationType)}...`);
+                 generateContent(lastGenerationType);
+            } else {
+                showMessage('error', 'Nenhum conteúdo foi gerado ainda para "Regenerar".');
+            }
+        }
 
-                const questions = await callGeminiAPI(prompt, 'questions');
-                if (questions) {
-                    allGeneratedQuestions = allGeneratedQuestions.concat(questions.filter(q => q.type === 'OpenEnded'));
+        function markdownToHtml(markdown) {
+            if (!markdown) return '';
+            
+            // Converte o texto simples em HTML, escapando caracteres especiais
+            let html = markdown
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+            // Cabeçalhos
+            html = html.replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mb-2">$1</h3>');
+            html = html.replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mb-3">$1</h2>');
+            html = html.replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4">$1</h1>');
+            
+            // Negrito e Itálico
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Listas (simplificado, não aninhado)
+            html = html.replace(/^\* (.*$)/gm, '<li>$1</li>'); // Listas com *
+            html = html.replace(/^\- (.*$)/gm, '<li>$1</li>'); // Listas com -
+            
+            // Agrupa LIs em ULs
+            html = html.replace(/((<li>.*<\/li>\s*)+)/g, '<ul class="list-disc pl-5 mb-4">$1</ul>');
+            
+            // Parágrafos (qualquer linha que não seja um H ou LI)
+            // Divide por quebra de linha, agrupa linhas não vazias em <p>
+            let paragraphs = [];
+            let currentParagraph = [];
+            
+            html.split('\n').forEach(line => {
+                if (!line.trim()) {
+                    if (currentParagraph.length > 0) {
+                        paragraphs.push(`<p>${currentParagraph.join('<br>')}</p>`);
+                        currentParagraph = [];
+                    }
+                } else if (!line.startsWith('<h') && !line.startsWith('<ul') && !line.startsWith('<li') && !line.startsWith('</ul')) {
+                    currentParagraph.push(line);
+                } else {
+                    if (currentParagraph.length > 0) {
+                         paragraphs.push(`<p>${currentParagraph.join('<br>')}</p>`);
+                         currentParagraph = [];
+                    }
+                    paragraphs.push(line); // Adiciona o H, UL, LI
                 }
+            });
+            
+            if (currentParagraph.length > 0) {
+                 paragraphs.push(`<p>${currentParagraph.join('<br>')}</p>`);
             }
-            displayQuizQuestions(allGeneratedQuestions);
-        });
 
-        generateSummaryButton.addEventListener('click', async () => {
-            const allMaterials = Array.from(document.querySelectorAll(`textarea[id^="studyMaterial_"]`))
-                                   .map(textarea => textarea.value.trim())
-                                   .filter(text => text.length > 0)
-                                   .join('\n\n---\n\n');
+            html = paragraphs.join('\n');
+            
+            // Limpa quebras de linha extras e parágrafos vazios
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p><br><\/p>/g, '<br>');
+            html = html.replace(/(<br>\s*)+/g, '<br>'); // Remove quebras de linha múltiplas
+            html = html.replace(/<\/li><br>/g, '</li>');
+            html = html.replace(/<\/ul><br>/g, '</ul>');
+            html = html.replace(/<br><ul>/g, '<ul>');
+            html = html.replace(/<br><li>/g, '<li>');
 
-            if (!allMaterials) {
-                showErrorMessage("Por favor, insira material de estudo para gerar o resumo.");
-                return;
-            }
-            const prompt = `Por favor, resuma o seguinte material de estudo em 3-5 frases concisas. Foque nos pontos principais.
-            Material:
-            "${allMaterials}"`;
-            const summary = await callGeminiAPI(prompt, 'summary');
-            if (summary) {
-                displaySummary(summary);
-            }
-        });
+            return html;
+        }
 
-        // Chama a inicialização do Firebase APÓS todas as referências de DOM estarem prontas
-        initializeFirebase();
-        reindexStudyBlocks(); // Reindexa os blocos existentes na carga inicial da página
-    }; // Fim de window.onload
-</script>
+
+        // Click outside modal to close
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Initialize recent sessions display
+        updateRecentSessions();
+    </script>
+    <!-- #################### FIM DO SCRIPT #################### -->
 </body>
 </html>
+
