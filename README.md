@@ -1,8 +1,8 @@
-# Estudo.IA: Gerador Inteligente de Questões e Resumos
+# Estudo.AI: Gerador Inteligente de Questões e Resumos
 
 ## 📖 Sobre o Projeto
 
-O Estudo.IA é uma ferramenta de estudo interativa, de página única (Single Page Application), projetada para ajudar estudantes e educadores a transformar materiais de estudo brutos em conteúdo de aprendizado dinâmico. Utilizando a API do Google Gemini, este aplicativo pode ler textos, PDFs e documentos Word para gerar automaticamente questões de múltipla escolha, verdadeiro/falso, perguntas abertas e resumos inteligentes.
+O Estudo.AI é uma ferramenta de estudo interativa, de página única (Single Page Application), projetada para ajudar estudantes e educadores a transformar materiais de estudo brutos em conteúdo de aprendizado dinâmico. Utilizando a API do Google Gemini, este aplicativo pode ler textos, PDFs e documentos Word para gerar automaticamente questões de múltipla escolha, verdadeiro/falso, perguntas abertas e resumos inteligentes.
 
 Esta versão do projeto utiliza um tema em tons pastéis, focado em uma experiência de usuário limpa, suave e acessível, sem a complexidade de múltiplos temas.
 
@@ -89,10 +89,10 @@ Feito com ❤️ para ajudar nos estudos.
 
 ## 👨‍💻 Como Usar
 
-O Estudo.IA é intuitivo e fácil de usar. Siga os passos abaixo para começar a gerar seus materiais de estudo:
+O Estudo.AI é intuitivo e fácil de usar. Siga os passos abaixo para começar a gerar seus materiais de estudo:
 
-1.  **Acesse a Aplicação:** Visite o Estudo.IA ao vivo através do GitHub Pages:
-    * [**Acesse o Estudo.IA AQUI!**](https://jonjonesbr.github.io/Estudo.IA/)
+1.  **Acesse a Aplicação:** Visite o Estudo.AI ao vivo através do GitHub Pages:
+    * [**Acesse o Estudo.AI AQUI!**](https://jonjonesbr.github.io/Estudo.IA/)
 
 2.  **Obtenha sua Chave API do Google Gemini:**
     * Para que a IA funcione, você precisará de uma chave da API do Google Gemini.
@@ -146,7 +146,7 @@ Sua contribuição é muito bem-vinda! Se você tiver ideias para melhorias, enc
 1.  Abra uma **[Issue](https://github.com/JonJonesBR/Estudo.IA/issues)** para descrever a sua sugestão ou problema.
 2.  Crie um **[Pull Request](https://github.com/JonJonesBR/Estudo.IA/pulls)** com suas alterações.
 
-Sua colaboração ajuda a tornar o Estudo.IA ainda melhor para todos os estudantes!
+Sua colaboração ajuda a tornar o Estudo.AI ainda melhor para todos os estudantes!
 
 ---
 
