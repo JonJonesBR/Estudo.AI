@@ -1,156 +1,156 @@
-﻿# Estudo.AI: Gerador Inteligente de QuestÃµes e Resumos
+# Estudo.AI: Gerador Inteligente de Questões e Resumos
 
-## ðŸ“– Sobre o Projeto
+##  Sobre o Projeto
 
-O Estudo.AI Ã© uma ferramenta de estudo interativa, de pÃ¡gina Ãºnica (Single Page Application), projetada para ajudar estudantes e educadores a transformar materiais de estudo brutos em conteÃºdo de aprendizado dinÃ¢mico. Utilizando a API do Google Gemini, este aplicativo pode ler textos, PDFs e documentos Word para gerar automaticamente questÃµes de mÃºltipla escolha, verdadeiro/falso, perguntas abertas e resumos inteligentes.
+O Estudo.AI é uma ferramenta de estudo interativa, de página única (Single Page Application), projetada para ajudar estudantes e educadores a transformar materiais de estudo brutos em conteúdo de aprendizado dinâmico. Utilizando a API do Google Gemini, este aplicativo pode ler textos, PDFs e documentos Word para gerar automaticamente questões de múltipla escolha, verdadeiro/falso, perguntas abertas e resumos inteligentes.
 
-Esta versÃ£o do projeto utiliza um tema em tons pastÃ©is, focado em uma experiÃªncia de usuÃ¡rio limpa, suave e acessÃ­vel, sem a complexidade de mÃºltiplos temas.
+Esta versão do projeto utiliza um tema em tons pastéis, focado em uma experiência de usuário limpa, suave e acessível, sem a complexidade de múltiplos temas.
 
-## âœ¨ Funcionalidades Principais
+## ✨ Funcionalidades Principais
 
-- GeraÃ§Ã£o com IA: Cria quizzes e resumos usando o poder da API do Google Gemini.
-- MÃºltiplos tipos de questÃ£o: Gera questÃµes de mÃºltipla escolha, verdadeiro/falso e discursivas.
+- Geração com IA: Cria quizzes e resumos usando o poder da API do Google Gemini.
+- Múltiplos tipos de questão: Gera questões de múltipla escolha, verdadeiro/falso e discursivas.
 - Resumos inteligentes: Condensa textos longos em resumos estruturados em formato Markdown.
-- Carregamento de arquivos: Aceita entrada de texto via cÃ³pia e cola ou carregamento de arquivos .txt, .pdf e .docx.
-- Quiz interativo: Permite que o usuÃ¡rio responda as questÃµes geradas e verifique seu desempenho.
-- Timer de estudo: Inclui um cronÃ´metro para gerenciamento do tempo de estudo.
-- ExportaÃ§Ã£o de conteÃºdo: Permite exportar os resultados gerados para .pdf, .json ou .txt.
-- Design responsivo: Interface limpa e adaptÃ¡vel a desktops, tablets e celulares, com um tema pastel agradÃ¡vel.
-- Portabilidade: Todo o aplicativo estÃ¡ contido em um Ãºnico arquivo index.html, facilitando a distribuiÃ§Ã£o e o uso local.
+- Carregamento de arquivos: Aceita entrada de texto via cópia e cola ou carregamento de arquivos .txt, .pdf e .docx.
+- Quiz interativo: Permite que o usuário responda as questões geradas e verifique seu desempenho.
+- Timer de estudo: Inclui um cronômetro para gerenciamento do tempo de estudo.
+- Exportação de conteúdo: Permite exportar os resultados gerados para .pdf, .json ou .txt.
+- Design responsivo: Interface limpa e adaptável a desktops, tablets e celulares, com um tema pastel agradável.
+- Portabilidade: Todo o aplicativo está contido em um único arquivo index.html, facilitando a distribuição e o uso local.
 
-## ðŸ› ï¸ Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 
-- **Front-end:** HTML5, CSS3 (com VariÃ¡veis CSS)
-- **EstilizaÃ§Ã£o:** [Tailwind CSS](https://tailwindcss.com/) (carregado via CDN)
+- **Front-end:** HTML5, CSS3 (com Variáveis CSS)
+- **Estilização:** [Tailwind CSS](https://tailwindcss.com/) (carregado via CDN)
 - **Interatividade:** JavaScript (ES6+)
-- **InteligÃªncia Artificial:** [Google Gemini API](https://aistudio.google.com/app/apikey)
+- **Inteligência Artificial:** [Google Gemini API](https://aistudio.google.com/app/apikey)
 
 ### Bibliotecas Externas
 
-- [Font Awesome](https://fontawesome.com/) (para Ã­cones)
+- [Font Awesome](https://fontawesome.com/) (para ícones)
 - [pdf.js](https://mozilla.github.io/pdf.js/) (para leitura de arquivos PDF)
 - [Mammoth.js](https://github.com/mwilliamson/mammoth.js) (para leitura de arquivos .docx)
-- [jsPDF](https://github.com/parallax/jsPDF) (para exportaÃ§Ã£o em PDF)
+- [jsPDF](https://github.com/parallax/jsPDF) (para exportação em PDF)
 
-## ðŸš€ Como Usar
+##  Como Usar
 
-Como este Ã© um projeto de arquivo Ãºnico, basta abrir o arquivo `index.html` em qualquer navegador moderno.
+Como este é um projeto de arquivo único, basta abrir o arquivo `index.html` em qualquer navegador moderno.
 
-### PrÃ©-requisito: Chave da API do Google Gemini
+### Pré-requisito: Chave da API do Google Gemini
 
-Para que as funcionalidades de IA funcionem, vocÃª precisa de uma chave de API do Google Gemini.
+Para que as funcionalidades de IA funcionem, você precisa de uma chave de API do Google Gemini.
 
 1. Acesse o [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. FaÃ§a login com sua conta do Google.
+2. Faça login com sua conta do Google.
 3. Clique em "Create API key" (Criar chave de API) em um novo projeto.
 4. Copie a chave gerada.
 
 ### Executando o Aplicativo
 
 1. Abra o arquivo `index.html`.
-2. Na seÃ§Ã£o "ConfiguraÃ§Ã£o NecessÃ¡ria", cole sua chave de API do Google Gemini no campo indicado.
-3. (Opcional) Clique no Ã­cone de salvar para armazenar a chave localmente no seu navegador.
+2. Na seção "Configuração Necessária", cole sua chave de API do Google Gemini no campo indicado.
+3. (Opcional) Clique no ícone de salvar para armazenar a chave localmente no seu navegador.
 
 Adicione seu material de estudo:
 
-- Cole o texto diretamente na Ã¡rea "Material 1".
+- Cole o texto diretamente na área "Material 1".
 - Clique em "Selecionar Arquivos" para carregar um arquivo .txt, .pdf ou .docx.
-- Escolha o nÃºmero de questÃµes, a dificuldade e clique em um dos botÃµes de geraÃ§Ã£o (ex: "MÃºltipla Escolha").
+- Escolha o número de questões, a dificuldade e clique em um dos botões de geração (ex: "Múltipla Escolha").
 - Aguarde o processamento e veja o resultado!
 
-## ðŸ”§ Estrutura do CÃ³digo
+##  Estrutura do Código
 
-Todo o cÃ³digo-fonte (HTML, CSS e JavaScript) estÃ¡ contido no arquivo `index.html` de forma intencional.
+Todo o código-fonte (HTML, CSS e JavaScript) está contido no arquivo `index.html` de forma intencional.
 
-- `<head>`: ContÃ©m a importaÃ§Ã£o de todas as CDNs (Tailwind, pdf.js, etc.) e o bloco `<style>` com as variÃ¡veis de cor (tema pastel) e estilos customizados.
-- `<body>`: Define a estrutura da interface, incluindo os modais e o rodapÃ©.
-- `<script>` (no final do `<body>`): ContÃ©m toda a lÃ³gica do aplicativo, incluindo:
-  - ManipulaÃ§Ã£o de eventos (cliques, uploads)
-  - FunÃ§Ãµes de leitura de arquivos (`processFile`)
-  - FunÃ§Ã£o `callGeminiAPI`, que faz a requisiÃ§Ã£o fetch para a API do Google
-  - FunÃ§Ãµes de exibiÃ§Ã£o (`displayResult`, `displayQuiz`)
-  - LÃ³gica do timer, estatÃ­sticas e exportaÃ§Ã£o
+- `<head>`: Contém a importação de todas as CDNs (Tailwind, pdf.js, etc.) e o bloco `<style>` com as variáveis de cor (tema pastel) e estilos customizados.
+- `<body>`: Define a estrutura da interface, incluindo os modais e o rodapé.
+- `<script>` (no final do `<body>`): Contém toda a lógica do aplicativo, incluindo:
+  - Manipulação de eventos (cliques, uploads)
+  - Funções de leitura de arquivos (`processFile`)
+  - Função `callGeminiAPI`, que faz a requisição fetch para a API do Google
+  - Funções de exibição (`displayResult`, `displayQuiz`)
+  - Lógica do timer, estatísticas e exportação
 
-## ðŸ“„ LicenÃ§a
+##  Licença
 
-Este projeto Ã© de cÃ³digo aberto e estÃ¡ licenciado sob a [LicenÃ§a MIT](https://gemini.google.com/u/2/app/LICENSE.md).  
-Sinta-se Ã  vontade para usar, modificar e distribuir o cÃ³digo.
+Este projeto é de código aberto e está licenciado sob a [Licença MIT](https://gemini.google.com/u/2/app/LICENSE.md).  
+Sinta-se à vontade para usar, modificar e distribuir o código.
 
 ---
 
-Feito com â¤ï¸ para ajudar nos estudos.
+Feito com ❤ para ajudar nos estudos.
 * **Resumos Inteligentes:** Obtenha resumos concisos e objetivos de qualquer material, destacando os pontos mais importantes.
-* **MÃºltiplos Materiais de Estudo:** Insira diferentes blocos de texto e defina o nÃºmero de questÃµes para cada um, permitindo uma segmentaÃ§Ã£o eficaz do estudo.
-* **Upload de Documentos (em breve):** Preparado para futuras integraÃ§Ãµes com arquivos `.pdf` e `.docx` para extraÃ§Ã£o automÃ¡tica de conteÃºdo.
-* **RevisÃ£o e Feedback InstantÃ¢neo:** Para questÃµes de mÃºltipla escolha e verdadeiro/falso, receba feedback imediato sobre suas respostas, com explicaÃ§Ãµes detalhadas.
-* **RecomendaÃ§Ãµes de Estudo:** Identifique os tÃ³picos que precisam de mais atenÃ§Ã£o com base no seu desempenho no quiz.
+* **Múltiplos Materiais de Estudo:** Insira diferentes blocos de texto e defina o número de questões para cada um, permitindo uma segmentação eficaz do estudo.
+* **Upload de Documentos (em breve):** Preparado para futuras integrações com arquivos `.pdf` e `.docx` para extração automática de conteúdo.
+* **Revisão e Feedback Instantâneo:** Para questões de múltipla escolha e verdadeiro/falso, receba feedback imediato sobre suas respostas, com explicações detalhadas.
+* **Recomendações de Estudo:** Identifique os tópicos que precisam de mais atenção com base no seu desempenho no quiz.
 
 ---
 
-## ðŸ‘¨â€ðŸ’» Como Usar
+## ‍ Como Usar
 
-O Estudo.AI Ã© intuitivo e fÃ¡cil de usar. Siga os passos abaixo para comeÃ§ar a gerar seus materiais de estudo:
+O Estudo.AI é intuitivo e fácil de usar. Siga os passos abaixo para começar a gerar seus materiais de estudo:
 
-1.  **Acesse a AplicaÃ§Ã£o:** Visite o Estudo.AI ao vivo atravÃ©s do GitHub Pages:
+1.  **Acesse a Aplicação:** Visite o Estudo.AI ao vivo através do GitHub Pages:
     * [**Acesse o Estudo.AI AQUI!**](https://jonjonesbr.github.io/Estudo.IA/)
 
 2.  **Obtenha sua Chave API do Google Gemini:**
-    * Para que a IA funcione, vocÃª precisarÃ¡ de uma chave da API do Google Gemini.
-    * A chave Ã© usada **apenas no seu navegador** e **NÃƒO Ã© armazenada** em nenhum lugar.
+    * Para que a IA funcione, você precisará de uma chave da API do Google Gemini.
+    * A chave é usada **apenas no seu navegador** e **NÃO é armazenada** em nenhum lugar.
     * Obtenha sua chave gratuitamente em: [**Google AI Studio API Key**](https://aistudio.google.com/app/apikey)
 
 3.  **Insira a Chave API:**
-    * Cole sua chave API no campo "Sua Chave API do Google Gemini" na aplicaÃ§Ã£o.
+    * Cole sua chave API no campo "Sua Chave API do Google Gemini" na aplicação.
 
 4.  **Adicione Seu Material de Estudo:**
-    * Cole o texto do seu material de estudo (anotaÃ§Ãµes, artigos, livros) nas caixas de texto.
-    * VocÃª pode adicionar **mÃºltiplos blocos de material** clicando em "+ Adicionar Outro Assunto" e definir quantas questÃµes deseja para cada um.
+    * Cole o texto do seu material de estudo (anotações, artigos, livros) nas caixas de texto.
+    * Você pode adicionar **múltiplos blocos de material** clicando em "+ Adicionar Outro Assunto" e definir quantas questões deseja para cada um.
     * **Dica:** Para resumos, utilize apenas o primeiro bloco de material.
 
-5.  **Configure o NÃºmero de QuestÃµes:**
-    * No campo "NÃºmero de QuestÃµes a Gerar (Total)", defina quantas questÃµes vocÃª deseja ao todo. Certifique-se de que a soma das questÃµes por assunto corresponda a este total.
+5.  **Configure o Número de Questões:**
+    * No campo "Número de Questões a Gerar (Total)", defina quantas questões você deseja ao todo. Certifique-se de que a soma das questões por assunto corresponda a este total.
 
-6.  **Gere ConteÃºdo:**
-    * Clique no botÃ£o correspondente Ã  sua necessidade:
-        * `Gerar MÃºltipla Escolha`
+6.  **Gere Conteúdo:**
+    * Clique no botão correspondente à sua necessidade:
+        * `Gerar Múltipla Escolha`
         * `Gerar Verdadeiro/Falso`
-        * `Gerar QuestÃµes Abertas`
-        * `âœ¨ Gerar Resumo`
+        * `Gerar Questões Abertas`
+        * `✨ Gerar Resumo`
 
 7.  **Revise e Estude!**
-    * Para questÃµes, responda o quiz e clique em "Verificar Respostas" para ver seu desempenho, as respostas corretas e explicaÃ§Ãµes.
-    * Para resumos, leia o conteÃºdo gerado e aprofunde seu aprendizado.
+    * Para questões, responda o quiz e clique em "Verificar Respostas" para ver seu desempenho, as respostas corretas e explicações.
+    * Para resumos, leia o conteúdo gerado e aprofunde seu aprendizado.
 
 ---
 
-## ðŸ› ï¸ Tecnologias e Ferramentas
+##  Tecnologias e Ferramentas
 
-Este projeto Ã© construÃ­do com as seguintes tecnologias e plataformas:
+Este projeto é construído com as seguintes tecnologias e plataformas:
 
 * **Frontend:**
-    * `HTML5`: Estrutura da aplicaÃ§Ã£o.
-    * `CSS3` (com [Tailwind CSS](https://tailwindcss.com/)): EstilizaÃ§Ã£o moderna e responsiva.
-    * `JavaScript`: LÃ³gica de interaÃ§Ã£o e comunicaÃ§Ã£o com a API.
-* **InteligÃªncia Artificial:**
-    * [**Google Gemini API (Google AI Studio)**](https://aistudio.google.com/): O coraÃ§Ã£o da geraÃ§Ã£o de questÃµes e resumos.
+    * `HTML5`: Estrutura da aplicação.
+    * `CSS3` (com [Tailwind CSS](https://tailwindcss.com/)): Estilização moderna e responsiva.
+    * `JavaScript`: Lógica de interação e comunicação com a API.
+* **Inteligência Artificial:**
+    * [**Google Gemini API (Google AI Studio)**](https://aistudio.google.com/): O coração da geração de questões e resumos.
 * **Hospedagem & Backend (simplificado):**
-    * [**GitHub Pages**](https://pages.github.com/): Hospedagem gratuita da aplicaÃ§Ã£o web.
-    * [**Firebase (SDK)**](https://firebase.google.com/): Utilizado para autenticaÃ§Ã£o anÃ´nima e potenciais funcionalidades futuras de persistÃªncia de dados (atualmente, o `appId` e `firebaseConfig` sÃ£o passados via variÃ¡veis de ambiente do Canvas, mas o cÃ³digo jÃ¡ estÃ¡ preparado para uma possÃ­vel integraÃ§Ã£o mais robusta).
+    * [**GitHub Pages**](https://pages.github.com/): Hospedagem gratuita da aplicação web.
+    * [**Firebase (SDK)**](https://firebase.google.com/): Utilizado para autenticação anônima e potenciais funcionalidades futuras de persistência de dados (atualmente, o `appId` e `firebaseConfig` são passados via variáveis de ambiente do Canvas, mas o código já está preparado para uma possível integração mais robusta).
 
 ---
 
-## ðŸ¤ ContribuiÃ§Ã£o
+##  Contribuição
 
-Sua contribuiÃ§Ã£o Ã© muito bem-vinda! Se vocÃª tiver ideias para melhorias, encontrar bugs ou quiser adicionar novas funcionalidades, por favor:
+Sua contribuição é muito bem-vinda! Se você tiver ideias para melhorias, encontrar bugs ou quiser adicionar novas funcionalidades, por favor:
 
-1.  Abra uma **[Issue](https://github.com/JonJonesBR/Estudo.IA/issues)** para descrever a sua sugestÃ£o ou problema.
-2.  Crie um **[Pull Request](https://github.com/JonJonesBR/Estudo.IA/pulls)** com suas alteraÃ§Ãµes.
+1.  Abra uma **[Issue](https://github.com/JonJonesBR/Estudo.IA/issues)** para descrever a sua sugestão ou problema.
+2.  Crie um **[Pull Request](https://github.com/JonJonesBR/Estudo.IA/pulls)** com suas alterações.
 
-Sua colaboraÃ§Ã£o ajuda a tornar o Estudo.AI ainda melhor para todos os estudantes!
+Sua colaboração ajuda a tornar o Estudo.AI ainda melhor para todos os estudantes!
 
 ---
 
-## ðŸ“§ Contato
+##  Contato
 
 Tenho prazer em conectar e discutir sobre IA e desenvolvimento web.
 
@@ -158,7 +158,7 @@ Tenho prazer em conectar e discutir sobre IA e desenvolvimento web.
 
 ---
 
-> "O Ãºnico limite para o nosso alcance Ã© a extensÃ£o da nossa visÃ£o." - James Cameron
+> "O único limite para o nosso alcance é a extensão da nossa visão." - James Cameron
 
 ## Destaques tecnicos
 
