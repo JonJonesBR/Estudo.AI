@@ -13,7 +13,7 @@ Transforma materiais de estudo (texto colado ou arquivos `.txt`, `.pdf`, `.docx`
 - Questões abertas (discursivas)
 - Resumos estruturados em Markdown
 
-Tudo em um único arquivo `index.html`, com quiz interativo, exportação para `.pdf`/`.json`/`.txt`, estatísticas de estudo e cronômetro.
+Tudo em um único arquivo `index.html`, com quiz interativo, exportação para `.pdf`/`.json`/`.txt`, estatísticas de estudo, cronômetro, modo escuro (botão no cabeçalho ou `Ctrl+D`) e botão flutuante "Verificar Respostas" que acompanha a rolagem com o progresso da questão atual.
 
 ## Provedores de IA
 

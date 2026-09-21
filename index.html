@@ -14,6 +14,16 @@
         // Define o worker globalmente para o pdf.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
     </script>
+    <script>
+        // Aplica o tema salvo antes da pintura para evitar flash
+        (function () {
+            try {
+                if (localStorage.getItem('theme') === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
@@ -39,7 +49,55 @@
             --text-primary: #023047; /* Azul-marinho escuro (quase preto) */
             --text-secondary: #495057; /* Cinza-médio */
             --border-color: #dee2e6; /* Cinza-claro */
+
+            /* Cores auxiliares (estados) */
+            --bg-hover: #f8f9fa;
+            --bg-hover-strong: #e9ecef;
+            --bg-success: #f0fdf4;
+            --bg-error: #fef2f2;
+            --bg-info: #eff6ff;
+            --bg-warning: #fffbeb;
+            --border-warning: #fde68a;
+            --text-success: #15803d;
+            --text-error: #b91c1c;
+            --text-info: #1e40af;
+            --text-warning: #b45309;
+            --gray-icon: #9ca3af;
+            --gray-secondary: #6b7280;
+            --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
         }
+
+        /* --- MODO ESCURO --- */
+        [data-theme="dark"] {
+            --primary-color: #8ecae6;
+            --secondary-color: #4ab3d6;
+            --accent-color: #f5c04d;
+            --success-color: #83c5be;
+            --warning-color: #f5c04d;
+            --error-color: #e76f51;
+
+            --bg-primary: #1e2530;
+            --bg-secondary: #141a22;
+
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3748;
+
+            --bg-hover: #232b38;
+            --bg-hover-strong: #2d3748;
+            --bg-success: #123528;
+            --bg-error: #3b1f1d;
+            --bg-info: #1a2740;
+            --bg-warning: #3a2e12;
+            --border-warning: #7c5e1e;
+            --text-success: #6ee7b7;
+            --text-error: #fca5a5;
+            --text-info: #93c5fd;
+            --text-warning: #fbbf24;
+            --gray-icon: #6b7280;
+            --gray-secondary: #4b5563;
+            --shadow-soft: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+         }
         /* --- FIM DA NOVA PALETA --- */
 
         * {
@@ -313,6 +371,67 @@
             transform: scale(1.1);
         }
 
+        /* --- Barra flutuante: Verificar Respostas --- */
+        #checkBar {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 900;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 8px 12px 8px 20px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+            max-width: calc(100vw - 32px);
+        }
+
+        #checkBar.show {
+            display: flex;
+        }
+
+        #checkBar .btn-primary {
+            white-space: nowrap;
+            padding: 10px 18px;
+        }
+
+        #checkBarProgress {
+            color: var(--text-secondary);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* Item de sessão recente com hover consistente nos dois temas */
+        .session-item {
+            background-color: var(--bg-hover);
+            transition: background-color 0.2s ease;
+        }
+
+        .session-item:hover {
+            background-color: var(--bg-hover-strong);
+        }
+
+        /* Overrides do Tailwind para o modo escuro */
+        [data-theme="dark"] .text-gray-400 { color: var(--gray-icon); }
+        [data-theme="dark"] .text-gray-500 { color: var(--gray-secondary); }
+        [data-theme="dark"] .hover\:bg-gray-50:hover { background-color: var(--bg-hover); }
+        [data-theme="dark"] .hover\:bg-gray-200:hover { background-color: var(--bg-hover-strong); }
+
+        /* Scrollbar sutil no modo escuro */
+        [data-theme="dark"] ::-webkit-scrollbar {
+            width: 10px;
+        }
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 5px;
+        }
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -428,6 +547,15 @@
                 border: 1px solid #ccc !important;
                 box-shadow: none !important;
             }
+
+            .question-block,
+            .explanation,
+            .model-answer,
+            .session-item {
+                background: white !important;
+                color: black !important;
+                border-color: #ccc !important;
+            }
         }
     </style>
 </head>
@@ -469,6 +597,11 @@
                     <button id="statsBtn" class="btn-secondary tooltip">
                         <i class="fas fa-chart-bar"></i>
                         <span class="tooltiptext">Estatísticas</span>
+                    </button>
+                    <!-- Theme -->
+                    <button id="themeToggle" class="btn-secondary tooltip" aria-label="Alternar tema claro/escuro">
+                        <i class="fas fa-moon"></i>
+                        <span class="tooltiptext">Tema claro/escuro</span>
                     </button>
                 </div>
             </div>
@@ -513,7 +646,7 @@
             </div>
 
             <!-- Configuração de IA -->
-            <div class="mb-6 p-4 border rounded-lg" style="background-color: #fffbeb; border-color: #fde68a; color: #b45309;">
+            <div class="mb-6 p-4 border rounded-lg" style="background-color: var(--bg-warning); border-color: var(--border-warning); color: var(--text-warning);">
                 <div class="flex items-start space-x-3">
                     <i class="fas fa-exclamation-triangle text-xl mt-1"></i>
                     <div>
@@ -747,7 +880,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span>Ctrl + D</span>
-                            <span>Tema (Removido)</span>
+                            <span>Tema (claro/escuro)</span>
                         </div>
                     </div>
                 </div>
@@ -809,15 +942,15 @@
                         <h4 class="text-lg font-semibold mb-4">Resultados do Quiz</h4>
                         <!-- AJUSTE: md:grid-cols-3 para 3 colunas em telas médias -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="text-center p-4 rounded-lg" style="background-color: #f0fdf4;">
+                            <div class="text-center p-4 rounded-lg" style="background-color: var(--bg-success);">
                                 <div class="text-2xl font-bold" style="color: var(--success-color);" id="correctCount">0</div>
                                 <div class="text-sm" style="color: var(--success-color);">Corretas</div>
                             </div>
-                            <div class="text-center p-4 rounded-lg" style="background-color: #fef2f2;">
+                            <div class="text-center p-4 rounded-lg" style="background-color: var(--bg-error);">
                                 <div class="text-2xl font-bold" style="color: var(--error-color);" id="incorrectCount">0</div>
                                 <div class="text-sm" style="color: var(--error-color);">Incorretas</div>
                             </div>
-                            <div class="text-center p-4 rounded-lg" style="background-color: #eff6ff;">
+                            <div class="text-center p-4 rounded-lg" style="background-color: var(--bg-info);">
                                 <div class="text-2xl font-bold" style="color: var(--primary-color);" id="scorePercent">0%</div>
                                 <div class="text-sm" style="color: var(--primary-color);">Aproveitamento</div>
                             </div>
@@ -970,6 +1103,13 @@
     <button id="scrollTop" class="floating-action hidden">
         <i class="fas fa-arrow-up"></i>
     </button>
+    <!-- Barra flutuante: Verificar Respostas (acompanha o scroll) -->
+    <div id="checkBar" class="no-print">
+        <span id="checkBarProgress">Questão 1 de 5</span>
+        <button id="checkBarBtn" class="btn-primary">
+            <i class="fas fa-check"></i> Verificar Respostas
+        </button>
+    </div>
 
     <footer class="text-center py-8 no-print px-4" style="color: var(--text-secondary);">
         <p>&copy; 2024 Estudo.AI - Ferramenta de estudo inteligente com IA</p>
@@ -1012,9 +1152,8 @@
                 document.getElementById('apiKey').value = savedApiKey;
             }
 
-            // Load saved theme - REMOVIDO
-            // const savedTheme = localStorage.getItem('theme') || 'light';
-            // setTheme(savedTheme);
+            // Aplica o tema salvo e sincroniza o ícone do toggle
+            setTheme(getSavedTheme());
 
             // Setup character counters
             setupCharacterCounters();
@@ -1059,13 +1198,13 @@
             document.getElementById('startTimer').addEventListener('click', startTimer);
             document.getElementById('pauseTimer').addEventListener('click', pauseTimer);
             document.getElementById('resetTimer').addEventListener('click', resetTimer);
-
-            // Modal controls
+            // Modal controls + tema
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
             document.getElementById('settingsBtn').addEventListener('click', () => openModal('settingsModal'));
             document.getElementById('statsBtn').addEventListener('click', () => openModal('statsModal'));
             document.getElementById('saveSettings').addEventListener('click', saveSettings);
-
-            // Export options
+            document.getElementById('checkAnswers').addEventListener('click', checkQuizAnswers);
+            document.getElementById('checkBarBtn').addEventListener('click', checkQuizAnswers);
             document.getElementById('exportPDF').addEventListener('click', exportToPDF);
             document.getElementById('exportJSON').addEventListener('click', exportToJSON);
             document.getElementById('exportTXT').addEventListener('click', exportToTXT);
@@ -1097,9 +1236,21 @@
             });
         }
 
-        // Theme management - REMOVIDO
-        // function toggleTheme() { ... }
-        // function setTheme(theme) { ... }
+        // Theme management
+        function getSavedTheme() {
+            try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; }
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            try { localStorage.setItem('theme', theme); } catch (e) {}
+            const icon = document.querySelector('#themeToggle i');
+            if (icon) icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        function toggleTheme() {
+            setTheme(getSavedTheme() === 'dark' ? 'light' : 'dark');
+        }
 
         // API Key management
         function toggleApiKeyVisibility() {
@@ -1612,6 +1763,7 @@
                 const summaryContent = document.getElementById('summaryContent');
                 // Converte o Markdown retornado em HTML
                 summaryContent.innerHTML = markdownToHtml(result); 
+                document.getElementById('checkBar').classList.remove('show');
             } else {
                 // Validação do resultado das questões
                 if (!result || !result.questions || !Array.isArray(result.questions) || result.questions.length === 0) {
@@ -1648,7 +1800,7 @@
                     // Validação simples
                     if (!q.options || q.options.length === 0) {
                          console.warn(`Questão ${index+1} (Múltipla) está sem opções.`);
-                         return `<div class="p-4 border rounded-lg mb-4" style="background-color: #fef2f2; border-color: var(--error-color); color: var(--error-color);">Questão ${index+1} inválida (sem opções).</div>`;
+                         return `<div class="p-4 border rounded-lg mb-4" style="background-color: var(--bg-error); border-color: var(--error-color); color: var(--error-color);">Questão ${index+1} inválida (sem opções).</div>`;
                     }
                     return `
                         <div class="question-block mb-6 p-4 border rounded-lg" style="border-color: var(--border-color);" data-question-index="${index}" ${correctData}>
@@ -1661,7 +1813,7 @@
                                     </label>
                                 `).join('')}
                             </div>
-                            <div class="explanation hidden mt-3 p-3 rounded-lg" style="background-color: #eff6ff; color: #1e40af;">
+                            <div class="explanation hidden mt-3 p-3 rounded-lg" style="background-color: var(--bg-info); color: var(--text-info);">
                                 <strong>Explicação:</strong> ${q.explanation || 'N/A'}
                             </div>
                         </div>
@@ -1680,7 +1832,7 @@
                                     <span>Falso</span>
                                 </label>
                             </div>
-                            <div class="explanation hidden mt-3 p-3 rounded-lg" style="background-color: #eff6ff; color: #1e40af;">
+                            <div class="explanation hidden mt-3 p-3 rounded-lg" style="background-color: var(--bg-info); color: var(--text-info);">
                                 <strong>Explicação:</strong> ${q.explanation || 'N/A'}
                             </div>
                         </div>
@@ -1690,13 +1842,36 @@
                         <div class="question-block mb-6 p-4 border rounded-lg" style="border-color: var(--border-color);" data-question-index="${index}">
                             <h4 class="font-semibold mb-3">${index + 1}. ${q.question}</h4>
                             <textarea class="input-field h-24 resize-none" placeholder="Digite sua resposta aqui..."></textarea>
-                            <div class="model-answer hidden mt-3 p-3 rounded-lg" style="background-color: #f0fdf4; color: #15803d;">
+                            <div class="model-answer hidden mt-3 p-3 rounded-lg" style="background-color: var(--bg-success); color: var(--text-success);">
                                 <strong>Resposta Modelo:</strong> ${q.answer || 'N/A'}
                             </div>
                         </div>
                     `;
                 }
             }).join('');
+
+            // Barra flutuante "Verificar Respostas" acompanha o usuário
+            document.getElementById('checkBarProgress').textContent = `Questão 1 de ${questions.length}`;
+            document.getElementById('checkBar').classList.add('show');
+            setupQuizProgressObserver(questions.length);
+        }
+
+        function setupQuizProgressObserver(totalQuestions) {
+            if (window.__quizObserver) window.__quizObserver.disconnect();
+            const blocks = document.querySelectorAll('.question-block');
+            const currentQuestionEl = document.getElementById('currentQuestion');
+            const progressEl = document.getElementById('checkBarProgress');
+
+            window.__quizObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    const idx = parseInt(entry.target.dataset.questionIndex, 10) + 1;
+                    if (currentQuestionEl) currentQuestionEl.textContent = idx;
+                    if (progressEl) progressEl.textContent = `Questão ${idx} de ${totalQuestions}`;
+                });
+            }, { rootMargin: '-40% 0px -40% 0px' });
+
+            blocks.forEach(block => window.__quizObserver.observe(block));
         }
 
         function checkQuizAnswers() {
@@ -1725,10 +1900,10 @@
                         // Compara a resposta selecionada (string) com a correta (pode ser string 'true'/'false' ou índice numérico)
                         if (selectedInput.value == correctAnswer) {
                             correct++;
-                            questionEl.style.backgroundColor = '#f0fdf4';
+                            questionEl.style.backgroundColor = 'var(--bg-success)';
                             questionEl.style.borderColor = 'var(--success-color)';
                         } else {
-                            questionEl.style.backgroundColor = '#fef2f2';
+                            questionEl.style.backgroundColor = 'var(--bg-error)';
                             questionEl.style.borderColor = 'var(--error-color)';
                         }
                     }
@@ -1756,6 +1931,7 @@
                      showMessage('success', 'Respostas modelo exibidas.');
                  }
             }
+            document.getElementById('checkBar').classList.remove('show');
         }
 
 
@@ -1906,7 +2082,7 @@
             }
             
             container.innerHTML = studyStats.sessions.slice(0, 5).map(session => `
-                <div class="p-2 rounded text-sm cursor-pointer hover:bg-gray-200" style="background-color: #f8f9fa;" onclick="loadSession(${session.id})">
+                <div class="session-item p-2 rounded text-sm cursor-pointer" onclick="loadSession(${session.id})">
                     <div class="font-medium">${getSessionTypeLabel(session.type)}</div>
                     <div class="text-xs" style="color: var(--text-secondary);">${new Date(session.timestamp).toLocaleString()}</div>
                 </div>
@@ -2171,14 +2347,14 @@
                         event.preventDefault();
                         document.getElementById('generateSummary').click();
                         break;
-                    case 'd': // Removido
+                    case 'd':
                         event.preventDefault();
-                        // toggleTheme();
+                        toggleTheme();
                         break;
                     case '/':
                     case '?':
                         event.preventDefault();
-                        showMessage('success', 'Atalhos: Ctrl+M (Múltipla), Ctrl+T (V/F), Ctrl+S (Resumo)');
+                        showMessage('success', 'Atalhos: Ctrl+M (Múltipla), Ctrl+T (V/F), Ctrl+S (Resumo), Ctrl+D (Tema)');
                         break;
                 }
             }
@@ -2243,6 +2419,7 @@
                 // Esconde resultados
                 document.getElementById('outputSection').classList.add('hidden');
                 document.getElementById('timerWidget').classList.add('hidden');
+                document.getElementById('checkBar').classList.remove('show');
                 
                 resetTimer();
                 
