@@ -28,11 +28,9 @@ Tudo em um único arquivo `index.html`, com quiz interativo, exportação para `
 - **Gemini Nano (Chrome local)** — exclusivo do Chrome e modelo limitado.
 - **Puter.js** — exigia servidor http/https e quebrava ao abrir o arquivo via `file://`.
 
-Detalhes da pesquisa: [PESQUISA-IA-GRATUITA.md](PESQUISA-IA-GRATUITA.md).
-
 ## Como usar
 
-1. Abra o `index.html` (ou o link do GitHub Pages).
+1. Abra o `index.html` (ou acesse o link do GitHub Pages acima).
 2. Selecione o provedor:
    - **Gratuito (Pollinations — sem chave)** — default, nada a configurar.
    - **Google Gemini (chave própria)** — cole sua chave do [Google AI Studio](https://aistudio.google.com/app/apikey). Salvar local é opcional.
@@ -49,7 +47,7 @@ O Pages está configurado no modo **deploy from branch** (`master`, raiz). Todo 
 ## Estrutura
 
 - `index.html` — app inteiro: HTML, CSS (variáveis + Tailwind CDN), JavaScript (leitura de arquivos, chamadas de IA, quiz, timer, exportação).
-- `PESQUISA-IA-GRATUITA.md` — pesquisa e veredito sobre alternativas gratuitas de IA sem chave.
+- `README.md` — este arquivo.
 
 ## Tecnologias
 
@@ -63,7 +61,7 @@ O Pages está configurado no modo **deploy from branch** (`master`, raiz). Todo 
 - **WebLLM / Transformers.js** — inferência local no navegador (sem rede, sem chave, privado). Custa download inicial de ~1-2 GB e exige WebGPU decente; bom fallback offline quando o hardware acompanhar.
 - **Puter.js** — user-pays, sem chave de dev, se o app for servido via https (GitHub Pages já atende); bloqueia `file://`.
 - **Backend opcional (ex.: Firebase)** — permitiria IA forte sem chave para o usuário final, mas quebra o caráter single-file.
-- **Testes automatizados** — hoje a validação é manual + testes de VM descartáveis; um arquivo de testes versionado daria segurança nas próximas mudanças.
+- **Testes automatizados** — hoje a validação é manual; um arquivo de testes versionado daria segurança nas próximas mudanças.
 - **Cache de respostas** — guardar gerações iguais (mesmo material) para não pagar fila duas vezes.
 
 ## Contribuição
