@@ -512,21 +512,31 @@
                 </div>
             </div>
 
-            <!-- API Key Section -->
+            <!-- Configuração de IA -->
             <div class="mb-6 p-4 border rounded-lg" style="background-color: #fffbeb; border-color: #fde68a; color: #b45309;">
                 <div class="flex items-start space-x-3">
                     <i class="fas fa-exclamation-triangle text-xl mt-1"></i>
                     <div>
-                        <p class="font-bold">Configuração Necessária:</p>
-                        <p class="mb-2">Para usar as funcionalidades de IA, insira sua chave da API do Google Gemini:</p>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:underline" style="color: var(--secondary-color);">
-                            <i class="fas fa-external-link-alt"></i> Obter Chave API Gratuita
-                        </a>
+                        <p class="font-bold">Configuração de IA:</p>
+                        <p class="mb-2">Pollinations (grátis, sem chave) e Google Gemini (chave própria). Fila pública do Pollinations pode levar 1-2 min.</p>
                     </div>
                 </div>
             </div>
 
             <div class="mb-6">
+                <label for="aiProvider" class="block text-sm font-medium mb-2">
+                    <i class="fas fa-microchip"></i> Provedor de IA:
+                </label>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                    <select id="aiProvider" class="input-field flex-1 min-w-[200px]" aria-label="Provedor de IA">
+                        <option value="pollinations">Gratuito (Pollinations — sem chave)</option>
+                        <option value="gemini">Google Gemini (chave própria)</option>
+                    </select>
+                    <p class="text-xs" style="color: var(--text-secondary);">Pollinations: gratuito, anônimo, sem chave. Fila pública pode levar 1-2 min em horários cheios.</p>
+                </div>
+            </div>
+
+            <div class="mb-6" id="apiKeyRow">
                 <label for="apiKey" class="block text-sm font-medium mb-2">
                     <i class="fas fa-key"></i> Chave API do Google Gemini:
                 </label>
@@ -548,6 +558,7 @@
                         <span class="tooltiptext">Salvar localmente (opcional)</span>
                     </button>
                 </div>
+                <p class="text-xs mt-1" style="color: var(--text-secondary);">Necessária apenas com o provedor Google Gemini.</p>
             </div>
         </div>
 
@@ -1007,6 +1018,10 @@
 
             // Setup character counters
             setupCharacterCounters();
+            // Provedor de IA: restaura escolha salva e ajusta UI
+            const savedProvider = localStorage.getItem('ai-provider');
+            if (savedProvider === 'pollinations' || savedProvider === 'gemini') document.getElementById('aiProvider').value = savedProvider;
+            applyProviderUI();
         }
 
         function setupEventListeners() {
@@ -1016,7 +1031,10 @@
             // API Key management
             document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
             document.getElementById('saveApiKey').addEventListener('click', saveApiKey);
-
+            // Provedor de IA
+            document.getElementById('aiProvider').addEventListener('change', () => {
+                applyProviderUI();
+            });
             // File handling
             document.getElementById('fileSelectBtn').addEventListener('click', () => {
                 document.getElementById('fileInput').click();
@@ -1304,11 +1322,15 @@
             }
             
             lastGenerationType = type; // Salva o tipo para "Regenerar"
-            const apiKey = document.getElementById('apiKey').value.trim();
-            
-            if (!apiKey) {
-                showMessage('error', 'Por favor, insira sua chave API do Google Gemini.');
-                return;
+            const provider = document.getElementById('aiProvider').value;
+            let apiKey = '';
+
+            if (provider === 'gemini') {
+                apiKey = document.getElementById('apiKey').value.trim();
+                if (!apiKey) {
+                    showMessage('error', 'Por favor, insira sua chave API do Google Gemini.');
+                    return;
+                }
             }
 
             const materials = getMaterials();
@@ -1324,7 +1346,7 @@
 
             try {
                 // ########### CHAMADA REAL DA API ###########
-                const result = await callGeminiAPI(type, materials, apiKey); 
+                const result = await callAI(type, materials, provider, apiKey);
                 // #########################################
                 
                 displayResult(type, result);
@@ -1368,21 +1390,21 @@
             
             return materials;
         }
+        // Encaminha a geração para o provedor selecionado
+        async function callAI(type, materials, provider, apiKey) {
+            if (provider === 'pollinations') return callAIPollinations(type, materials);
+            return callGeminiAPI(type, materials, apiKey);
+        }
 
-        // ########### FUNÇÃO REAL DA API GEMINI ###########
-        async function callGeminiAPI(type, materials, apiKey) {
-            const difficulty = document.getElementById('difficulty').value;
-            const totalQuestions = document.getElementById('totalQuestionsInput').value;
-            const aiModel = document.getElementById('aiModel').value;
-            const temperature = parseFloat(document.getElementById('temperature').value);
-            
+        // Monta o prompt compartilhado entre provedores
+        function buildPrompt(type, materials, count) {
+            const totalQuestions = count !== undefined ? count : document.getElementById('totalQuestionsInput').value;
             const combinedContent = materials.map(m => `--- Início Material ${materials.indexOf(m) + 1} ---\n${m.content}\n--- Fim Material ${materials.indexOf(m) + 1} ---`).join('\n\n');
-
+            const difficulty = document.getElementById('difficulty').value;
             let systemInstruction = "Você é um assistente educacional especialista em criar materiais de estudo. Responda em português brasileiro.";
             let userQuery = "";
-            let responseMimeType = "text/plain";
+            const wantsJson = type !== 'summary';
             
-            // Define o prompt e o tipo de resposta esperado
             if (type === 'summary') {
                 userQuery = `Crie um resumo detalhado e bem estruturado (em formato markdown) do seguinte conteúdo, destacando os pontos principais, conceitos-chave e informações importantes.
                 
@@ -1390,29 +1412,81 @@
                 ${combinedContent}`;
             } else {
                 // Para questões, pedimos JSON
-                responseMimeType = "application/json";
                 systemInstruction += " Responda APENAS com o objeto JSON solicitado, sem nenhum texto adicional antes ou depois.";
                 
                 if (type === 'multiple') {
-                    userQuery = `Gere ${totalQuestions} questões de múltipla escolha (nível ${difficulty}) baseadas no conteúdo abaixo.
-                    O JSON deve ter o formato: { "questions": [{ "question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": 0, "explanation": "..." }] }
+                    userQuery = `Responda APENAS com JSON válido, começando com {"questions": [ ... ]}, sem texto antes ou depois. Gere ${totalQuestions} questões de múltipla escolha (nível ${difficulty}) baseadas no conteúdo abaixo.
+                    Formato (sem comentários): { "questions": [{ "question": "...", "options": ["A) ...", "B) ...", "C) ...", "D) ..."], "correct": 0, "explanation": "..." }] }
                     Onde "correct" é o índice (base 0) da opção correta.
                     
                     Conteúdo: ${combinedContent}`;
                 } else if (type === 'truefalse') {
-                    userQuery = `Gere ${totalQuestions} questões de Verdadeiro/Falso (nível ${difficulty}) baseadas no conteúdo abaixo.
-                    O JSON deve ter o formato: { "questions": [{ "question": "...", "correct": true, "explanation": "..." }] }
+                    userQuery = `Responda APENAS com JSON válido, começando com {"questions": [ ... ]}, sem texto antes ou depois. Gere ${totalQuestions} questões de Verdadeiro/Falso (nível ${difficulty}) baseadas no conteúdo abaixo.
+                    Formato (sem comentários): { "questions": [{ "question": "...", "correct": true, "explanation": "..." }] }
                     Onde "correct" é um booleano (true/false).
                     
                     Conteúdo: ${combinedContent}`;
                 } else if (type === 'open') {
-                     userQuery = `Gere ${totalQuestions} questões abertas (discursivas) (nível ${difficulty}) baseadas no conteúdo abaixo.
-                    O JSON deve ter o formato: { "questions": [{ "question": "...", "answer": "..." }] }
+                     userQuery = `Responda APENAS com JSON válido, começando com {"questions": [ ... ]}, sem texto antes ou depois. Gere ${totalQuestions} questões abertas (discursivas) (nível ${difficulty}) baseadas no conteúdo abaixo.
+                    Formato (sem comentários): { "questions": [{ "question": "...", "answer": "..." }] }
                     Onde "answer" é uma resposta modelo detalhada.
                     
                     Conteúdo: ${combinedContent}`;
                 }
             }
+            return { systemInstruction, userQuery, wantsJson };
+        }
+        // ########### POLLINATIONS (grátis, sem chave, anônimo) ###########
+        async function callAIPollinations(type, materials) {
+            const p = buildPrompt(type, materials);
+            const prompt = p.systemInstruction + "\n\n" + p.userQuery;
+            const text = await pollinationsFetch('https://text.pollinations.ai/' + encodeURIComponent(prompt));
+            if (!text.trim()) throw new Error('Pollinations retornou resposta vazia.');
+            return p.wantsJson ? parseAIJson(text) : text;
+        }
+
+        async function pollinationsFetch(url, attempts) {
+            attempts = attempts || 0;
+            if (attempts >= 5) throw new Error('Pollinations: fila pública congestionada. Tente novamente em alguns minutos.');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 180000); // fila pública pode demorar
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                if (res.status === 429) {
+                    console.warn('Pollinations: fila cheia (429), aguardando...');
+                    await new Promise(r => setTimeout(r, 15000));
+                    return pollinationsFetch(url, attempts + 1);
+                }
+                if (!res.ok) {
+                    let msg = `Pollinations: ${res.status} ${res.statusText}`;
+                    try { const err = await res.json(); msg = err.message || msg; } catch (e) {}
+                    throw new Error(msg);
+                }
+                return await res.text();
+            } catch (e) {
+                if (e.name === 'AbortError') throw new Error('Pollinations: tempo esgotado (fila cheia). Tente novamente.');
+                throw e;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+
+        function applyProviderUI() {
+            const p = document.getElementById('aiProvider').value;
+            document.getElementById('apiKeyRow').classList.toggle('hidden', p !== 'gemini');
+            localStorage.setItem('ai-provider', p);
+        }
+        // ###################################################
+
+        // ########### FUNÇÃO REAL DA API GEMINI ###########
+        async function callGeminiAPI(type, materials, apiKey) {
+            const aiModel = document.getElementById('aiModel').value;
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const p = buildPrompt(type, materials);
+            const responseMimeType = p.wantsJson ? "application/json" : "text/plain";
+            const systemInstruction = p.systemInstruction;
+            const userQuery = p.userQuery;
             
             // Monta a URL e o Payload
             const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent?key=${apiKey}`;
@@ -1482,6 +1556,11 @@
                     try {
                         return JSON.parse(match[0]);
                     } catch (e2) {
+                        // JSON cortado no limite de tokens: tenta fechar a estrutura
+                        const base = match[0];
+                        for (const close of [']}', ']', '}']) {
+                            try { return JSON.parse(base + close); } catch (e3) {}
+                        }
                         console.error("Falha ao analisar JSON limpo:", e2);
                         throw new Error("A IA retornou um JSON em formato inválido.");
                     }
